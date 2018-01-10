@@ -14,13 +14,22 @@ export default class Display {
         Display.canvas.width = Display.displayMode.getWidth();
         Display.canvas.height = Display.displayMode.getHeight();
 
-        const gl: WebGL2RenderingContext | null = Display.canvas.getContext("webgl2");
+        document.body.appendChild(Display.canvas);
 
-        if (!gl) {
-            new Error("no webgl render context available");
-            return;
+        switch (displayMode.getRenderMode()) {
+
+            case RenderMode.HARDWARE:
+                const gl: WebGL2RenderingContext | null = Display.canvas.getContext("webgl2");
+                if (!gl) throw new Error("No suitable WebGL render context available (needs version 2)");
+                Display.gl = gl;
+
+                break;
+            case RenderMode.SOFTWARE:
+
+                break;
+            default:
+                throw new Error("No render mode defined");
         }
-        Display.gl = gl;
     }
 
     public static setTitle(title: string): void {
@@ -57,10 +66,12 @@ export class DisplayMode {
     private width: number;
     private height: number;
     private renderMode: RenderMode;
+    private frameRate: number;
 
-    constructor(width: number, height: number, renderMode: RenderMode = RenderMode.HARDWARE) {
+    constructor(width: number, height: number, frameRate: number = 60, renderMode: RenderMode = RenderMode.HARDWARE) {
         this.width = width;
         this.height = height;
+        this.frameRate = frameRate;
         this.renderMode = renderMode;
     }
 
@@ -74,6 +85,17 @@ export class DisplayMode {
 
     public getHeight(): number {
         return this.height;
+    }
+
+    public getRenderMode(): RenderMode {
+        return this.renderMode;
+    }
+
+    public getFrameRate(): number {
+        return this.frameRate;
+    }
+    public setFrameRate(frameRate: number): void {
+        this.frameRate = frameRate;
     }
 }
 

@@ -1,0 +1,32 @@
+{
+    "models": {
+        "path": "models/",
+        "files": [
+            "cube.obj",
+            "cube_simple.obj",
+            "player.obj",
+            "test.obj",
+            "plane.obj",
+            "cone.obj"
+        ]
+    },
+    "shaders": {
+        "path": "shaders/",
+        "files": [
+            "basicFragment.glsl",
+            "basicVertex.glsl",
+            "phongVertex.glsl",
+            "phongFragment.glsl"
+        ]
+    },
+    "textures": {
+        "path": "textures/",
+        "files": [
+            "player.png",
+            "UV_Grid.jpg",
+            "black.png",
+            "blue.png",
+            "cone.png"
+        ]
+    }
+}
