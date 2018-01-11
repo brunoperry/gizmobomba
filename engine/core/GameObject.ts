@@ -3,6 +3,7 @@ import CoreEngine from "./CoreEngine";
 import Transform from "./Transform";
 import { RenderMode } from "./Display";
 import RenderingEngine from "../rendering/RenderingEngine";
+import Shader from "../rendering/Shader";
 
 export default class GameObject {
 
@@ -23,7 +24,6 @@ export default class GameObject {
 
 	public addChild(child: GameObject): GameObject {
 		
-		console.log(child.m_name)
 		this.m_children.push(child);
 		child.setEngine(this.m_engine);
 		child.getTransform().setParent(this.m_transform);
@@ -55,10 +55,11 @@ export default class GameObject {
 		}
 	}
 
-	public renderAll(renderingEngine: RenderingEngine): void {
-		this.render(renderingEngine);
+	public renderAll(shader: Shader, renderingEngine: RenderingEngine): void {
+
+		this.render(shader, renderingEngine);
 		for (let i: number = 0; i < this.m_children.length; i++) {
-			this.m_children[i].renderAll(renderingEngine);
+			this.m_children[i].renderAll(shader, renderingEngine);
 		}
 	}
 
@@ -77,10 +78,10 @@ export default class GameObject {
 		}
 	}
 
-	public render(renderingEngine: RenderingEngine): void {
+	public render(shader: Shader, renderingEngine: RenderingEngine): void {
 
 		for (let i: number = 0; i < this.m_components.length; i++) {
-			this.m_components[i].render(renderingEngine);
+			this.m_components[i].render(shader, renderingEngine);
 		}
 	}
 
@@ -101,14 +102,13 @@ export default class GameObject {
 	}
 
 	public setEngine(engine: CoreEngine | null): void {
-		console.log(engine);
 
-		if(engine === null) {
-			throw new Error("Error: No valid engine");
-		}
-		console.log("here");
+		// if(engine === null) {
+		// 	throw new Error("Error: No valid engine");
+		// }
+		// console.log("here");
 
-		if (this.m_engine !== engine) {
+		if (this.m_engine !== engine && engine !== null) {
 			this.m_engine = engine;
 
 			for (let i: number = 0; i < this.m_components.length; i++) {

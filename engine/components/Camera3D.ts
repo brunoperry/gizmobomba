@@ -21,7 +21,6 @@ export default class Camera3D extends GameComponent {
 
     public addToEngine(engine: CoreEngine): void {
 
-        console.log("adding");
         engine.getRenderingEngine().addCamera(this);
     }
 }

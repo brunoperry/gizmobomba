@@ -4,6 +4,7 @@ import GameObject from "../core/GameObject";
 import Transform from "../core/Transform";
 import Camera3D from "../components/Camera3D";
 import MappedValues from "../core/resourceManagment/MappedValues";
+import Shader from "./Shader";
 
 export default class RenderingEngine extends MappedValues {
 
@@ -13,7 +14,7 @@ export default class RenderingEngine extends MappedValues {
 	// private m_lights: Array<BaseLight>;
 	// private m_activeLight: BaseLight;
 
-	// private m_forwardAmbient: Shader;
+	private m_ambientShader: Shader;
 	private m_mainCamera: Camera3D;
 
 	constructor() {
@@ -26,7 +27,7 @@ export default class RenderingEngine extends MappedValues {
 
 		this.addVector3f("ambient", new Vector3f(0.1, 0.1, 0.1));
 
-		// this.m_forwardAmbient = new Shader("basic");
+		this.m_ambientShader = new Shader("ambient");
 
 		this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
 
@@ -52,7 +53,7 @@ export default class RenderingEngine extends MappedValues {
 		}
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 
-		object.renderAll(this);
+		object.renderAll(this.m_ambientShader, this);
 
 		this.gl.enable(this.gl.BLEND);
 		this.gl.blendFunc(this.gl.ONE, this.gl.ONE);
@@ -90,7 +91,6 @@ export default class RenderingEngine extends MappedValues {
 
 	public addCamera(camera: Camera3D): void {
 		this.m_mainCamera = camera;
-		console.log(this.m_mainCamera)
 	}
 
 	public getSamplerSlot(samplerName: string): number | undefined {

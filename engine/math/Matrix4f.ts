@@ -145,7 +145,28 @@ export default class Matrix4f {
 		return res;
 	}
 
-	public getM(): number[][] {
+	public getMFloatArray(): Float32Array {
+
+
+		const result: Array<number> = new Array<number>(); 
+
+		for (let i: number = 0; i < 4; i++)
+			for (let j: number = 0; j < 4; j++)
+				result.push(this.m[i][j]);
+
+
+		return new Float32Array(result);
+		// const res: number[][] = [][4];
+
+		// for (let i: number = 0; i < 4; i++)
+		// 	for (let j: number = 0; j < 4; j++)
+		// 		res[i][j] = this.m[i][j];
+
+		// return res;
+	}
+
+	private getM() : number[][] {
+
 		const res: number[][] = [][4];
 
 		for (let i: number = 0; i < 4; i++)

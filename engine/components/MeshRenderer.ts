@@ -7,26 +7,23 @@ import Shader from "../rendering/Shader";
 
 export default class MeshRenderer extends GameComponent {
     private m_mesh: Mesh;
-    private m_shader: Shader;
+    // private m_shader: Shader;
     private m_material: Material;
 
-    constructor(mesh: Mesh, material: Material, shader: Shader) {
+    constructor(mesh: Mesh, material: Material) {
         super();
         this.m_mesh = mesh;
         this.m_material = material;
-        this.m_shader = shader;
-    }
-
-    public setShader(shader: Shader):void {
-        this.m_shader = shader;
+        // this.m_shader = shader;
     }
 
     // @Override
-    public render(renderingEngine: RenderingEngine): void {
+    public render(shader:Shader, renderingEngine: RenderingEngine): void {
 
-        super.render(renderingEngine);
-        this.m_shader.bind();
-        this.m_shader.updateUniforms(this.getTransform(), this.m_material, renderingEngine);
+        super.render(shader, renderingEngine);
+        // this.m_shader.bind();
+        // this.m_shader.updateUniforms(this.getTransform(), this.m_material, renderingEngine);
+        // this.m_shader.update(this.getTransform(), this.m_material, renderingEngine);
         this.m_mesh.draw();
     }
 }

@@ -14,7 +14,9 @@
         "path": "shaders/",
         "files": [
             "basicFragment.glsl",
-            "basicVertex.glsl"
+            "basicVertex.glsl",
+            "ambientVertex.glsl",
+            "ambientFragment.glsl"
         ]
     },
     "textures": {

@@ -6,7 +6,7 @@ import RenderingEngine from "../rendering/RenderingEngine";
 export default abstract class Game {
 	private m_root: GameObject;
 
-	public init(): void { }
+	public init(): void {console.log("inisf") }
 
 	public input(delta: number): void {
 		this.getRootObject().inputAll(delta);
@@ -23,7 +23,7 @@ export default abstract class Game {
 
 	public addObject(object: GameObject): void {
 
-		console.log(object.m_name)
+		// console.log(this.getRootObject())
 		this.getRootObject().addChild(object);
 	}
 

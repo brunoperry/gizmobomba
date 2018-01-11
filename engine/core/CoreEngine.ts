@@ -28,7 +28,7 @@ export default class CoreEngine {
         this.m_game = game;
 		game.setEngine(this);
 
-		this.m_renderingEngine = new RenderingEngine();
+        this.m_renderingEngine = new RenderingEngine();
 	}
 
 	// public setGame(game: Game): void {
@@ -55,15 +55,17 @@ export default class CoreEngine {
 
 	private run(): void {
 
-
 		this.m_isRunning = true;
+
+        let frames: number = 0;
+        let frameCounter: number = 0;
+
+        this.m_game.init();
+
 		let instance: CoreEngine = this;
 
         let lastTime: number = Time.getTime();
         let unprocessedTime: number = 0;
-
-        let frames: number = 0;
-        let frameCounter: number = 0;
 
         let loop: Function = function(e) {
 

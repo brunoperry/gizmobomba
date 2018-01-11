@@ -19,7 +19,6 @@ export default class Main {
             Display.create(new DisplayMode(800, 600, 60));
             Display.setTitle("Gizmo Bomba 3D");
             Main.engine = new CoreEngine(Display.getDisplayMode(), new TestGame());
-
             Main.start();
         });
     }

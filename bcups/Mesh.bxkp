@@ -51,7 +51,6 @@ export default class Mesh {
 
         this.m_resource = new MeshResource(indices.length);
 
-
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.m_resource.getVbo());
         this.gl.bufferData(this.gl.ARRAY_BUFFER, Util.CreateFlippedVertexBuffer(vertices), this.gl.STATIC_DRAW);
 
