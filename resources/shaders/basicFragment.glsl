@@ -2,7 +2,6 @@
 precision mediump float;
 // Passed in from the vertex shader.
 in vec2 texcoord0;
-// in vec4 normal0;
  
 // The texture.
 uniform vec3 baseColor;

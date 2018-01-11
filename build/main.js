@@ -427,6 +427,9 @@ define("engine/core/Util", ["require", "exports", "engine/core/Vertex"], functio
         static toRadians(degrees) {
             return degrees * Math.PI / 180;
         }
+        static isWhitespace(char) {
+            return /\S/.test(char);
+        }
         static loadJSONFile(url) {
             return __awaiter(this, void 0, void 0, function* () {
                 let response = yield fetch(url);
@@ -440,22 +443,22 @@ define("engine/core/Util", ["require", "exports", "engine/core/Vertex"], functio
             return buffer;
         }
         static CreateFlippedVertexBuffer(vertices) {
-            const buffer = new Float32Array(vertices.length * Vertex_1.default.SIZE);
-            console.log(buffer.length);
+            const values = new Array();
             for (let i = 0; i < vertices.length; i++) {
-                console.log(i);
-                buffer.set([], vertices[i].getPos().getX());
-                buffer.set([], vertices[i].getPos().getY());
-                buffer.set([], vertices[i].getPos().getZ());
-                buffer.set([], vertices[i].getTexCoord().getX());
-                buffer.set([], vertices[i].getTexCoord().getY());
-                buffer.set([], vertices[i].getNormal().getX());
-                buffer.set([], vertices[i].getNormal().getY());
-                buffer.set([], vertices[i].getNormal().getZ());
-                buffer.set([], vertices[i].getTangent().getX());
-                buffer.set([], vertices[i].getTangent().getY());
-                buffer.set([], vertices[i].getTangent().getZ());
+                values.push(vertices[i].getPos().getX());
+                values.push(vertices[i].getPos().getY());
+                values.push(vertices[i].getPos().getZ());
+                values.push(vertices[i].getTexCoord().getX());
+                values.push(vertices[i].getTexCoord().getY());
+                values.push(vertices[i].getNormal().getX());
+                values.push(vertices[i].getNormal().getY());
+                values.push(vertices[i].getNormal().getZ());
+                values.push(vertices[i].getTangent().getX());
+                values.push(vertices[i].getTangent().getY());
+                values.push(vertices[i].getTangent().getZ());
             }
+            const buffer = new Float32Array(vertices.length * Vertex_1.default.SIZE);
+            buffer.set(values);
             buffer.reverse();
             return buffer;
         }
@@ -488,7 +491,91 @@ define("engine/core/Util", ["require", "exports", "engine/core/Vertex"], functio
     }
     exports.default = Util;
 });
-define("engine/math/Matrix4f", ["require", "exports", "engine/core/Util", "engine/math/Vector3f"], function (require, exports, Util_2, Vector3f_3) {
+define("engine/core/Display", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class Display {
+        static create(displayMode) {
+            Display.displayMode = displayMode;
+            Display.canvas = document.createElement("canvas");
+            Display.canvas.width = Display.displayMode.getWidth();
+            Display.canvas.height = Display.displayMode.getHeight();
+            document.body.appendChild(Display.canvas);
+            switch (displayMode.getRenderMode()) {
+                case RenderMode.HARDWARE:
+                    const gl = Display.canvas.getContext("webgl2");
+                    if (!gl)
+                        throw new Error("No suitable WebGL render context available (needs version 2)");
+                    Display.gl = gl;
+                    break;
+                case RenderMode.SOFTWARE:
+                    break;
+                default:
+                    throw new Error("No render mode defined");
+            }
+        }
+        static setTitle(title) {
+            document.title = title;
+        }
+        static update() {
+        }
+        static setFullscreen(fullscreen) {
+        }
+        static getAdapterProperties() {
+            const gl = Display.gl;
+            let version = ("Version: " + gl.getParameter(gl.VERSION) + "\n");
+            version += ("Shader Version: " + gl.getParameter(gl.SHADING_LANGUAGE_VERSION) + "\n");
+            version += ("Vendor: " + gl.getParameter(gl.VENDOR));
+            return version;
+        }
+        static getWidth() {
+            return Display.getDisplayMode().getWidth();
+        }
+        static getHeight() {
+            return Display.getDisplayMode().getHeight();
+        }
+        static getAspectRatio() {
+            return Display.getDisplayMode().getWidth() / Display.getDisplayMode().getHeight();
+        }
+        static getDisplayMode() {
+            return Display.displayMode;
+        }
+    }
+    exports.default = Display;
+    class DisplayMode {
+        constructor(width, height, frameRate = 60, renderMode = RenderMode.HARDWARE) {
+            this.width = width;
+            this.height = height;
+            this.frameRate = frameRate;
+            this.renderMode = renderMode;
+        }
+        isFullscreenCapable() {
+            return Display.canvas.requestFullscreen !== null;
+        }
+        getWidth() {
+            return this.width;
+        }
+        getHeight() {
+            return this.height;
+        }
+        getRenderMode() {
+            return this.renderMode;
+        }
+        getFrameRate() {
+            return this.frameRate;
+        }
+        setFrameRate(frameRate) {
+            this.frameRate = frameRate;
+        }
+    }
+    exports.DisplayMode = DisplayMode;
+    var RenderMode;
+    (function (RenderMode) {
+        RenderMode[RenderMode["HARDWARE"] = 0] = "HARDWARE";
+        RenderMode[RenderMode["SOFTWARE"] = 1] = "SOFTWARE";
+    })(RenderMode = exports.RenderMode || (exports.RenderMode = {}));
+});
+define("engine/math/Matrix4f", ["require", "exports", "engine/core/Util", "engine/math/Vector3f", "engine/core/Display"], function (require, exports, Util_2, Vector3f_3, Display_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class Matrix4f {
@@ -613,7 +700,7 @@ define("engine/math/Matrix4f", ["require", "exports", "engine/core/Util", "engin
             this.m[3][3] = 1;
             return this;
         }
-        initPerspective(fov, aspectRatio, zNear, zFar) {
+        initPerspective(fov = 70, aspectRatio = Display_1.default.getAspectRatio(), zNear = 0.1, zFar = 1000) {
             const tanHalfFOV = Math.tan(fov / 2);
             const zRange = zNear - zFar;
             this.m[0][0] = 1.0 / (tanHalfFOV * aspectRatio);
@@ -718,81 +805,6 @@ define("engine/math/Matrix4f", ["require", "exports", "engine/core/Util", "engin
         }
     }
     exports.default = Matrix4f;
-});
-define("engine/core/Display", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    class Display {
-        static create(displayMode) {
-            Display.displayMode = displayMode;
-            Display.canvas = document.createElement("canvas");
-            Display.canvas.width = Display.displayMode.getWidth();
-            Display.canvas.height = Display.displayMode.getHeight();
-            document.body.appendChild(Display.canvas);
-            switch (displayMode.getRenderMode()) {
-                case RenderMode.HARDWARE:
-                    const gl = Display.canvas.getContext("webgl2");
-                    if (!gl)
-                        throw new Error("No suitable WebGL render context available (needs version 2)");
-                    Display.gl = gl;
-                    break;
-                case RenderMode.SOFTWARE:
-                    break;
-                default:
-                    throw new Error("No render mode defined");
-            }
-        }
-        static setTitle(title) {
-            document.title = title;
-        }
-        static update() {
-        }
-        static setFullscreen(fullscreen) {
-        }
-        static getAdapterProperties() {
-            const gl = Display.gl;
-            let version = ("Version: " + gl.getParameter(gl.VERSION) + "\n");
-            version += ("Shader Version: " + gl.getParameter(gl.SHADING_LANGUAGE_VERSION) + "\n");
-            version += ("Vendor: " + gl.getParameter(gl.VENDOR));
-            return version;
-        }
-        static getDisplayMode() {
-            return Display.displayMode;
-        }
-    }
-    exports.default = Display;
-    class DisplayMode {
-        constructor(width, height, frameRate = 60, renderMode = RenderMode.HARDWARE) {
-            this.width = width;
-            this.height = height;
-            this.frameRate = frameRate;
-            this.renderMode = renderMode;
-        }
-        isFullscreenCapable() {
-            return Display.canvas.requestFullscreen !== null;
-        }
-        getWidth() {
-            return this.width;
-        }
-        getHeight() {
-            return this.height;
-        }
-        getRenderMode() {
-            return this.renderMode;
-        }
-        getFrameRate() {
-            return this.frameRate;
-        }
-        setFrameRate(frameRate) {
-            this.frameRate = frameRate;
-        }
-    }
-    exports.DisplayMode = DisplayMode;
-    var RenderMode;
-    (function (RenderMode) {
-        RenderMode[RenderMode["HARDWARE"] = 0] = "HARDWARE";
-        RenderMode[RenderMode["SOFTWARE"] = 1] = "SOFTWARE";
-    })(RenderMode = exports.RenderMode || (exports.RenderMode = {}));
 });
 define("engine/core/Transform", ["require", "exports", "engine/math/Matrix4f", "engine/math/Vector3f", "engine/math/Quaternion"], function (require, exports, Matrix4f_2, Vector3f_4, Quaternion_1) {
     "use strict";
@@ -905,13 +917,13 @@ define("engine/core/resourceManagment/MappedValues", ["require", "exports", "eng
     }
     exports.default = MappedValues;
 });
-define("engine/rendering/RenderingEngine", ["require", "exports", "engine/core/Display", "engine/math/Vector3f", "engine/core/resourceManagment/MappedValues"], function (require, exports, Display_1, Vector3f_6, MappedValues_1) {
+define("engine/rendering/RenderingEngine", ["require", "exports", "engine/core/Display", "engine/math/Vector3f", "engine/core/resourceManagment/MappedValues"], function (require, exports, Display_2, Vector3f_6, MappedValues_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class RenderingEngine extends MappedValues_1.default {
         constructor() {
             super();
-            this.gl = Display_1.default.gl;
+            this.gl = Display_2.default.gl;
             this.m_samplerMap = new Map();
             this.m_samplerMap.set("diffuse", 0);
             this.m_samplerMap.set("normalMap", 1);
@@ -929,6 +941,7 @@ define("engine/rendering/RenderingEngine", ["require", "exports", "engine/core/D
                 return;
             }
             this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+            object.renderAll(this);
             this.gl.enable(this.gl.BLEND);
             this.gl.blendFunc(this.gl.ONE, this.gl.ONE);
             this.gl.depthMask(false);
@@ -938,11 +951,12 @@ define("engine/rendering/RenderingEngine", ["require", "exports", "engine/core/D
             this.gl.disable(this.gl.BLEND);
         }
         static getOpenGLVersion() {
-            const gl = Display_1.default.gl;
+            const gl = Display_2.default.gl;
             return gl.getParameter(gl.VERSION);
         }
         addCamera(camera) {
             this.m_mainCamera = camera;
+            console.log(this.m_mainCamera);
         }
         getSamplerSlot(samplerName) {
             return this.m_samplerMap.get(samplerName);
@@ -971,6 +985,7 @@ define("engine/core/Game", ["require", "exports", "engine/core/GameObject"], fun
             renderingEngine.render(this.getRootObject());
         }
         addObject(object) {
+            console.log(object.m_name);
             this.getRootObject().addChild(object);
         }
         getRootObject() {
@@ -978,7 +993,7 @@ define("engine/core/Game", ["require", "exports", "engine/core/GameObject"], fun
                 this.m_root = new GameObject_1.default();
             return this.m_root;
         }
-        SetEngine(engine) { this.getRootObject().setEngine(engine); }
+        setEngine(engine) { this.getRootObject().setEngine(engine); }
     }
     exports.default = Game;
 });
@@ -1000,19 +1015,156 @@ define("engine/core/Time", ["require", "exports"], function (require, exports) {
     Time.delta = 0;
     exports.default = Time;
 });
-define("engine/core/CoreEngine", ["require", "exports", "engine/rendering/RenderingEngine", "engine/core/Time"], function (require, exports, RenderingEngine_1, Time_1) {
+define("engine/input/Keyboard", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class Keyboard {
+        static create() {
+            window.onkeyup = function (e) {
+                Keyboard.keys[e.keyCode] = false;
+            };
+            window.onkeydown = function (e) {
+                Keyboard.keys[e.keyCode] = true;
+            };
+        }
+        static isKeyDown(keyCode) {
+            return Keyboard.keys[keyCode] === true;
+        }
+    }
+    Keyboard.LEFT = 37;
+    Keyboard.UP = 38;
+    Keyboard.RIGHT = 39;
+    Keyboard.DOWN = 40;
+    Keyboard.W = 87;
+    Keyboard.A = 65;
+    Keyboard.S = 83;
+    Keyboard.D = 68;
+    Keyboard.SPACE = 32;
+    Keyboard.ESCAPE = 27;
+    Keyboard.NUM_KEYCODES = 9;
+    Keyboard.keys = [];
+    exports.default = Keyboard;
+});
+define("engine/input/Mouse", ["require", "exports", "engine/math/Vector2f", "engine/core/Display"], function (require, exports, Vector2f_3, Display_3) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class Mouse {
+        static create() {
+            Display_3.default.canvas.onmousedown = function (e) {
+                Mouse.buttons[e.button] = true;
+            };
+            Display_3.default.canvas.onmouseup = function (e) {
+                Mouse.buttons[e.button] = false;
+            };
+        }
+        static moveCallback(e) {
+            let x = Mouse.currentPosition.getX();
+            let y = Mouse.currentPosition.getY();
+            let x1 = -e.movementX;
+            let y1 = -e.movementY;
+            if (x === x1 && y === y1) {
+                Mouse.currentPosition.setX(0);
+                Mouse.currentPosition.setY(0);
+            }
+            else {
+                Mouse.currentPosition.setX(x1);
+                Mouse.currentPosition.setY(y1);
+            }
+        }
+        static isButtonDown(buttonCode) {
+            return Mouse.buttons[buttonCode] === true;
+        }
+        static getX() {
+            return Mouse.currentPosition.getX();
+        }
+        static getY() {
+            return Mouse.currentPosition.getY();
+        }
+        static setMouseLock(lock) {
+            Mouse.isLocked = lock;
+            if (!lock) {
+                Display_3.default.canvas.removeEventListener("mousemove", Mouse.moveCallback);
+            }
+            else {
+                Display_3.default.canvas.addEventListener("mousemove", Mouse.moveCallback);
+            }
+        }
+    }
+    Mouse.FIRE = 0;
+    Mouse.MIDDLE = 1;
+    Mouse.RIGHT = 2;
+    Mouse.NUM_MOUSE_BUTTONS = 3;
+    Mouse.currentPosition = new Vector2f_3.default();
+    Mouse.previousPosition = new Vector2f_3.default();
+    Mouse.buttons = [];
+    Mouse.sensitivity = 0.3;
+    Mouse.isLocked = false;
+    exports.default = Mouse;
+});
+define("engine/input/Input", ["require", "exports", "engine/math/Vector2f", "engine/input/Keyboard", "engine/input/Mouse"], function (require, exports, Vector2f_4, Keyboard_1, Mouse_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class Input {
+        static update() {
+            for (let i = 0; i < Keyboard_1.default.NUM_KEYCODES; i++) {
+                Input.lastKeys[i] = Input.getKey(i);
+            }
+            for (let i = 0; i < Mouse_1.default.NUM_MOUSE_BUTTONS; i++) {
+                Input.lastMouse[i] = Input.getMouse(i);
+            }
+        }
+        static getKey(keyCode) {
+            return Keyboard_1.default.isKeyDown(keyCode);
+        }
+        static getKeyDown(keyCode) {
+            return Input.getKey(keyCode) && !Input.lastKeys[keyCode];
+        }
+        static getKeyUp(keyCode) {
+            return !Input.getKey(keyCode) && Input.lastKeys[keyCode];
+        }
+        static getMouse(mouseButton) {
+            return Mouse_1.default.isButtonDown(mouseButton);
+        }
+        static getMouseDown(mouseButton) {
+            return Input.getMouse(mouseButton) && !Input.lastMouse[mouseButton];
+        }
+        static getMouseUp(mouseButton) {
+            return !Input.getMouse(mouseButton) && Input.lastMouse[mouseButton];
+        }
+        static getMouseLock() {
+            return Mouse_1.default.isLocked;
+        }
+        static getMousePosition() {
+            let res;
+            Input.previousDeltaPos = Input.currentDeltaPos;
+            Input.currentDeltaPos = new Vector2f_4.default(Mouse_1.default.getX(), Mouse_1.default.getY());
+            if (Input.previousDeltaPos.equals(Input.currentDeltaPos)) {
+                res = new Vector2f_4.default(0, 0);
+            }
+            else {
+                res = Input.currentDeltaPos;
+            }
+            return res;
+        }
+    }
+    Input.lastKeys = new Array(Keyboard_1.default.NUM_KEYCODES);
+    Input.lastMouse = new Array(Mouse_1.default.NUM_MOUSE_BUTTONS);
+    Input.currentDeltaPos = new Vector2f_4.default();
+    Input.previousDeltaPos = new Vector2f_4.default();
+    exports.default = Input;
+});
+define("engine/core/CoreEngine", ["require", "exports", "engine/rendering/RenderingEngine", "engine/core/Time", "engine/input/Input", "engine/input/Keyboard"], function (require, exports, RenderingEngine_1, Time_1, Input_1, Keyboard_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class CoreEngine {
-        constructor(display) {
+        constructor(display, game) {
             this.m_isRunning = false;
             this.m_width = display.getWidth();
             this.m_height = display.getHeight();
             this.m_frameTime = 1.0 / display.getFrameRate();
-            this.m_renderingEngine = new RenderingEngine_1.default();
-        }
-        setGame(game) {
             this.m_game = game;
+            game.setEngine(this);
+            this.m_renderingEngine = new RenderingEngine_1.default();
         }
         createRendering(title) {
         }
@@ -1048,13 +1200,18 @@ define("engine/core/CoreEngine", ["require", "exports", "engine/rendering/Render
                     }
                     Time_1.default.setDelta(instance.m_frameTime);
                     instance.m_game.input(Time_1.default.getDelta());
+                    Input_1.default.update();
                     instance.m_game.update(Time_1.default.getDelta());
+                    if (Input_1.default.getKey(Keyboard_2.default.ESCAPE)) {
+                        instance.stop();
+                    }
                     if (frameCounter >= Time_1.default.SECOND) {
                         frames = 0;
                         frameCounter = 0;
                     }
                 }
                 if (render) {
+                    instance.m_game.render(instance.m_renderingEngine);
                     frames++;
                 }
             };
@@ -1072,12 +1229,15 @@ define("engine/core/GameObject", ["require", "exports", "engine/core/Transform"]
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class GameObject {
-        constructor() {
+        constructor(name = "root") {
             this.m_children = new Array();
             this.m_components = new Array();
             this.m_transform = new Transform_1.default();
+            this.m_name = name;
+            this.m_engine = null;
         }
         addChild(child) {
+            console.log(child.m_name);
             this.m_children.push(child);
             child.setEngine(this.m_engine);
             child.getTransform().setParent(this.m_transform);
@@ -1134,7 +1294,12 @@ define("engine/core/GameObject", ["require", "exports", "engine/core/Transform"]
             return this.m_transform;
         }
         setEngine(engine) {
-            if (this.m_engine != engine) {
+            console.log(engine);
+            if (engine === null) {
+                throw new Error("Error: No valid engine");
+            }
+            console.log("here");
+            if (this.m_engine !== engine) {
                 this.m_engine = engine;
                 for (let i = 0; i < this.m_components.length; i++) {
                     this.m_components[i].addToEngine(engine);
@@ -1179,17 +1344,85 @@ define("engine/components/Camera3D", ["require", "exports", "engine/math/Matrix4
             return this.m_projection.mul(cameraRotation.mul(cameraTranslation));
         }
         addToEngine(engine) {
+            console.log("adding");
             engine.getRenderingEngine().addCamera(this);
         }
     }
     exports.default = Camera3D;
 });
-define("engine/core/resourceManagment/MeshResource", ["require", "exports", "engine/core/Display"], function (require, exports, Display_2) {
+define("engine/components/FreeLook", ["require", "exports", "engine/components/GameComponent", "engine/math/Vector3f", "engine/math/Vector2f", "engine/core/Display", "engine/core/Util", "engine/input/Input", "engine/input/Keyboard"], function (require, exports, GameComponent_2, Vector3f_7, Vector2f_5, Display_4, Util_3, Input_2, Keyboard_3) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class FreeLook extends GameComponent_2.default {
+        constructor(sensitivity) {
+            super();
+            this.m_mouseLocked = false;
+            this.init(sensitivity, Keyboard_3.default.ESCAPE);
+        }
+        init(sensitivity, unlockMouseKey) {
+            this.m_sensitivity = sensitivity;
+            this.m_unlockMouseKey = unlockMouseKey;
+        }
+        Input(delta) {
+            const centerPosition = new Vector2f_5.default(Display_4.default.getWidth() / 2, Display_4.default.getHeight() / 2);
+            if (Input_2.default.getKey(this.m_unlockMouseKey)) {
+                this.m_mouseLocked = false;
+            }
+            if (Input_2.default.getMouseDown(0)) {
+                this.m_mouseLocked = true;
+            }
+            if (this.m_mouseLocked) {
+                const deltaPos = Input_2.default.getMousePosition().subVec(centerPosition);
+                const rotY = deltaPos.getX() != 0;
+                const rotX = deltaPos.getY() != 0;
+                if (rotY)
+                    this.getTransform().rotate(FreeLook.Y_AXIS, Util_3.default.toRadians(deltaPos.getX() * this.m_sensitivity));
+                if (rotX)
+                    this.getTransform().rotate(this.getTransform().getRot().getRight(), Util_3.default.toRadians(-deltaPos.getY() * this.m_sensitivity));
+            }
+        }
+    }
+    FreeLook.Y_AXIS = new Vector3f_7.default(0, 1, 0);
+    exports.default = FreeLook;
+});
+define("engine/components/FreeMove", ["require", "exports", "engine/components/GameComponent", "engine/input/Keyboard", "engine/input/Input"], function (require, exports, GameComponent_3, Keyboard_4, Input_3) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class FreeMove extends GameComponent_3.default {
+        constructor(speed) {
+            super();
+            this.init(speed, Keyboard_4.default.W, Keyboard_4.default.S, Keyboard_4.default.A, Keyboard_4.default.D);
+        }
+        init(speed, forwardKey, backKey, leftKey, rightKey) {
+            this.m_speed = speed;
+            this.m_forwardKey = forwardKey;
+            this.m_backKey = backKey;
+            this.m_leftKey = leftKey;
+            this.m_rightKey = rightKey;
+        }
+        input(delta) {
+            const movAmt = this.m_speed * delta;
+            if (Input_3.default.getKey(this.m_forwardKey))
+                this.move(this.getTransform().getRot().getForward(), movAmt);
+            if (Input_3.default.getKey(this.m_backKey))
+                this.move(this.getTransform().getRot().getForward(), -movAmt);
+            if (Input_3.default.getKey(this.m_leftKey))
+                this.move(this.getTransform().getRot().getLeft(), movAmt);
+            if (Input_3.default.getKey(this.m_rightKey))
+                this.move(this.getTransform().getRot().getRight(), movAmt);
+        }
+        move(dir, amt) {
+            this.getTransform().setPos(this.getTransform().getPos().addVec(dir.mulNum(amt)));
+        }
+    }
+    exports.default = FreeMove;
+});
+define("engine/core/resourceManagment/MeshResource", ["require", "exports", "engine/core/Display"], function (require, exports, Display_5) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class MeshResource {
         constructor(size) {
-            this.gl = Display_2.default.gl;
+            this.gl = Display_5.default.gl;
             this.m_vbo = this.gl.createBuffer();
             this.m_ibo = this.gl.createBuffer();
             this.m_size = size;
@@ -1212,7 +1445,134 @@ define("engine/core/resourceManagment/MeshResource", ["require", "exports", "eng
     }
     exports.default = MeshResource;
 });
-define("engine/core/resourceManagment/loaders/IndexedModel", ["require", "exports", "engine/math/Vector3f"], function (require, exports, Vector3f_7) {
+define("engine/core/resourceManagment/loaders/OBJIndex", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class OBJIndex {
+        getVertexIndex() { return this.m_vertexIndex; }
+        getTexCoordIndex() { return this.m_texCoordIndex; }
+        getNormalIndex() { return this.m_normalIndex; }
+        setVertexIndex(val) { this.m_vertexIndex = val; }
+        setTexCoordIndex(val) { this.m_texCoordIndex = val; }
+        setNormalIndex(val) { this.m_normalIndex = val; }
+        equals(obj) {
+            const index = obj;
+            return this.m_vertexIndex == index.m_vertexIndex
+                && this.m_texCoordIndex == index.m_texCoordIndex
+                && this.m_normalIndex == index.m_normalIndex;
+        }
+        hashCode() {
+            const BASE = 17;
+            const MULTIPLIER = 31;
+            let result = BASE;
+            result = MULTIPLIER * result + this.m_vertexIndex;
+            result = MULTIPLIER * result + this.m_texCoordIndex;
+            result = MULTIPLIER * result + this.m_normalIndex;
+            return result;
+        }
+    }
+    exports.default = OBJIndex;
+});
+define("engine/core/resourceManagment/loaders/ResourcesLoader", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ResourcesLoader {
+        static loadModels(models) {
+            return __awaiter(this, void 0, void 0, function* () {
+                return Promise.all(models.map(url => fetch(ResourcesLoader.URL + url).then(resp => resp.text()))).then((mData) => {
+                    let key;
+                    for (let i = 0; i < mData.length; i++) {
+                        key = models[i].split("/")[1];
+                        ResourcesLoader.modelsData.set(key, mData[i]);
+                    }
+                    return true;
+                })
+                    .catch(error => {
+                    return false;
+                });
+            });
+        }
+        static loadShaders(shaders) {
+            return __awaiter(this, void 0, void 0, function* () {
+                return Promise.all(shaders.map(url => fetch(ResourcesLoader.URL + url).then(resp => resp.text()))).then(sData => {
+                    let key;
+                    for (let i = 0; i < sData.length; i++) {
+                        key = shaders[i].split("/")[1];
+                        ResourcesLoader.shadersData.set(key, sData[i]);
+                    }
+                    return true;
+                })
+                    .catch(error => {
+                    return false;
+                });
+            });
+        }
+        static loadTextures(textures) {
+            return __awaiter(this, void 0, void 0, function* () {
+                return Promise.all(textures.map(url => fetch(ResourcesLoader.URL + url).then(resp => resp.blob()))).then(tData => {
+                    let key;
+                    for (let i = 0; i < tData.length; i++) {
+                        key = textures[i].split("/")[1];
+                        ResourcesLoader.texturesData.set(key, tData[i]);
+                    }
+                    return true;
+                });
+            });
+        }
+        static loadResources(json) {
+            return __awaiter(this, void 0, void 0, function* () {
+                let models = Array();
+                let shaders = Array();
+                let textures = Array();
+                for (let i = 0; i < json.models.files.length; i++) {
+                    models.push(json.models.path + json.models.files[i]);
+                }
+                for (let i = 0; i < json.shaders.files.length; i++) {
+                    shaders.push(json.shaders.path + json.shaders.files[i]);
+                }
+                for (let i = 0; i < json.textures.files.length; i++) {
+                    textures.push(json.textures.path + json.textures.files[i]);
+                }
+                return ResourcesLoader.loadModels(models)
+                    .then((res) => {
+                    return ResourcesLoader.loadShaders(shaders);
+                })
+                    .then(res => {
+                    return ResourcesLoader.loadTextures(textures);
+                });
+            });
+        }
+    }
+    ResourcesLoader.URL = "resources/";
+    ResourcesLoader.modelsData = new Map();
+    ResourcesLoader.shadersData = new Map();
+    ResourcesLoader.texturesData = new Map();
+    exports.default = ResourcesLoader;
+});
+define("engine/core/resourceManagment/loaders/TextFileReader", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class TextFileReader {
+        constructor(textFile) {
+            this.lineCounter = -1;
+            this.lines = textFile.split("\n");
+        }
+        readLine() {
+            if (this.lineCounter >= this.lines.length - 1) {
+                return false;
+            }
+            else {
+                this.lineCounter++;
+                return true;
+            }
+        }
+        getLine() {
+            return this.lines[this.lineCounter];
+        }
+    }
+    exports.default = TextFileReader;
+});
+define("engine/core/resourceManagment/loaders/IndexedModel", ["require", "exports", "engine/math/Vector3f"], function (require, exports, Vector3f_8) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class IndexedModel {
@@ -1251,7 +1611,7 @@ define("engine/core/resourceManagment/loaders/IndexedModel", ["require", "export
                 const deltaV2 = this.m_texCoords[i2].getY() - this.m_texCoords[i0].getY();
                 const dividend = (deltaU1 * deltaV2 - deltaU2 * deltaV1);
                 const f = dividend == 0 ? 0.0 : 1.0 / dividend;
-                const tangent = new Vector3f_7.default(0, 0, 0);
+                const tangent = new Vector3f_8.default(0, 0, 0);
                 tangent.SetX(f * (deltaV2 * edge1.getX() - deltaV1 * edge2.getX()));
                 tangent.SetY(f * (deltaV2 * edge1.getY() - deltaV1 * edge2.getY()));
                 tangent.SetZ(f * (deltaV2 * edge1.getZ() - deltaV1 * edge2.getZ()));
@@ -1275,107 +1635,7 @@ define("engine/core/resourceManagment/loaders/IndexedModel", ["require", "export
     }
     exports.default = IndexedModel;
 });
-define("engine/core/resourceManagment/loaders/OBJIndex", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    class OBJIndex {
-        getVertexIndex() { return this.m_vertexIndex; }
-        getTexCoordIndex() { return this.m_texCoordIndex; }
-        getNormalIndex() { return this.m_normalIndex; }
-        setVertexIndex(val) { this.m_vertexIndex = val; }
-        setTexCoordIndex(val) { this.m_texCoordIndex = val; }
-        setNormalIndex(val) { this.m_normalIndex = val; }
-        equals(obj) {
-            const index = obj;
-            return this.m_vertexIndex == index.m_vertexIndex
-                && this.m_texCoordIndex == index.m_texCoordIndex
-                && this.m_normalIndex == index.m_normalIndex;
-        }
-        hashCode() {
-            const BASE = 17;
-            const MULTIPLIER = 31;
-            let result = BASE;
-            result = MULTIPLIER * result + this.m_vertexIndex;
-            result = MULTIPLIER * result + this.m_texCoordIndex;
-            result = MULTIPLIER * result + this.m_normalIndex;
-            return result;
-        }
-    }
-    exports.default = OBJIndex;
-});
-define("engine/core/resourceManagment/loaders/ResourcesLoader", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    class ResourcesLoader {
-        static loadResources(json) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let models = Array();
-                let shaders = Array();
-                let textures = Array();
-                for (let i = 0; i < json.models.files.length; i++) {
-                    models.push(json.models.path + json.models.files[i]);
-                }
-                for (let i = 0; i < json.shaders.files.length; i++) {
-                    shaders.push(json.shaders.path + json.shaders.files[i]);
-                }
-                for (let i = 0; i < json.textures.files.length; i++) {
-                    textures.push(json.textures.path + json.textures.files[i]);
-                }
-                return Promise.all(models.map(url => fetch(ResourcesLoader.URL + url).then(resp => resp.text()))).then((mData) => {
-                    let key;
-                    for (let i = 0; i < mData.length; i++) {
-                        key = models[i].split("/")[1];
-                        ResourcesLoader.modelsData.set(key, mData[i]);
-                    }
-                    return Promise.all(shaders.map(url => fetch(ResourcesLoader.URL + url).then(resp => resp.text()))).then(sData => {
-                        for (let i = 0; i < sData.length; i++) {
-                            key = shaders[i].split("/")[1];
-                            ResourcesLoader.shadersData.set(key, sData[i]);
-                        }
-                        return Promise.all(textures.map(url => fetch(ResourcesLoader.URL + url).then(resp => resp.blob()))).then(tData => {
-                            for (let i = 0; i < tData.length; i++) {
-                                key = textures[i].split("/")[1];
-                                ResourcesLoader.texturesData.set(key, textures[i]);
-                            }
-                            return true;
-                        });
-                    });
-                }).catch((error) => {
-                    return false;
-                });
-            });
-        }
-    }
-    ResourcesLoader.URL = "resources/";
-    ResourcesLoader.modelsData = new Map();
-    ResourcesLoader.shadersData = new Map();
-    ResourcesLoader.texturesData = new Map();
-    exports.default = ResourcesLoader;
-});
-define("engine/core/resourceManagment/loaders/TextFileReader", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    class TextFileReader {
-        constructor(textFile) {
-            this.lineCounter = -1;
-            this.lines = textFile.split("\n");
-        }
-        readLine() {
-            if (this.lineCounter >= this.lines.length - 1) {
-                return false;
-            }
-            else {
-                this.lineCounter++;
-                return true;
-            }
-        }
-        getLine() {
-            return this.lines[this.lineCounter];
-        }
-    }
-    exports.default = TextFileReader;
-});
-define("engine/core/resourceManagment/loaders/OBJModel", ["require", "exports", "engine/math/Vector3f", "engine/math/Vector2f", "engine/core/resourceManagment/loaders/OBJIndex", "engine/core/resourceManagment/loaders/TextFileReader", "engine/core/Util", "engine/core/resourceManagment/loaders/IndexedModel", "engine/core/resourceManagment/loaders/ResourcesLoader"], function (require, exports, Vector3f_8, Vector2f_3, OBJIndex_1, TextFileReader_1, Util_3, IndexedModel_1, ResourcesLoader_1) {
+define("engine/core/resourceManagment/loaders/OBJModel", ["require", "exports", "engine/math/Vector3f", "engine/math/Vector2f", "engine/core/resourceManagment/loaders/OBJIndex", "engine/core/resourceManagment/loaders/TextFileReader", "engine/core/Util", "engine/core/resourceManagment/loaders/IndexedModel", "engine/core/resourceManagment/loaders/ResourcesLoader"], function (require, exports, Vector3f_9, Vector2f_6, OBJIndex_1, TextFileReader_1, Util_4, IndexedModel_1, ResourcesLoader_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class OBJModel {
@@ -1394,17 +1654,17 @@ define("engine/core/resourceManagment/loaders/OBJModel", ["require", "exports", 
             while (meshReader.readLine()) {
                 let line = meshReader.getLine();
                 let tokens = line.split(" ");
-                tokens = Util_3.default.RemoveEmptyStrings(tokens);
+                tokens = Util_4.default.RemoveEmptyStrings(tokens);
                 if (tokens.length == 0 || tokens[0] === "#")
                     continue;
                 else if (tokens[0] === OBJModel.OBJProperties.VERTEX) {
-                    this.m_positions.push(new Vector3f_8.default(parseFloat(tokens[1]), parseFloat(tokens[2]), parseFloat(tokens[3])));
+                    this.m_positions.push(new Vector3f_9.default(parseFloat(tokens[1]), parseFloat(tokens[2]), parseFloat(tokens[3])));
                 }
                 else if (tokens[0] === OBJModel.OBJProperties.UV) {
-                    this.m_texCoords.push(new Vector2f_3.default(parseFloat(tokens[1]), 1.0 - parseFloat(tokens[2])));
+                    this.m_texCoords.push(new Vector2f_6.default(parseFloat(tokens[1]), 1.0 - parseFloat(tokens[2])));
                 }
                 else if (tokens[0] === OBJModel.OBJProperties.NORMAL) {
-                    this.m_normals.push(new Vector3f_8.default(parseFloat(tokens[1]), parseFloat(tokens[2]), parseFloat(tokens[3])));
+                    this.m_normals.push(new Vector3f_9.default(parseFloat(tokens[1]), parseFloat(tokens[2]), parseFloat(tokens[3])));
                 }
                 else if (tokens[0] === OBJModel.OBJProperties.FACE) {
                     for (let i = 0; i < tokens.length - 3; i++) {
@@ -1429,11 +1689,11 @@ define("engine/core/resourceManagment/loaders/OBJModel", ["require", "exports", 
                 if (this.m_hasTexCoords)
                     currentTexCoord = this.m_texCoords[currentIndex.getTexCoordIndex()];
                 else
-                    currentTexCoord = new Vector2f_3.default(0, 0);
+                    currentTexCoord = new Vector2f_6.default(0, 0);
                 if (this.m_hasNormals)
                     currentNormal = this.m_normals[currentIndex.getNormalIndex()];
                 else
-                    currentNormal = new Vector3f_8.default(0, 0, 0);
+                    currentNormal = new Vector3f_9.default(0, 0, 0);
                 let modelVertexIndex = resultIndexMap.get(currentIndex);
                 if (modelVertexIndex === undefined) {
                     modelVertexIndex = result.getPositions().length;
@@ -1450,7 +1710,7 @@ define("engine/core/resourceManagment/loaders/OBJModel", ["require", "exports", 
                     normalModel.getPositions().push(currentPosition);
                     normalModel.getTexCoords().push(currentTexCoord);
                     normalModel.getNormals().push(currentNormal);
-                    normalModel.getTangents().push(new Vector3f_8.default(0, 0, 0));
+                    normalModel.getTangents().push(new Vector3f_9.default(0, 0, 0));
                 }
                 indexMap.set(modelVertexIndex, normalModelIndex);
                 result.getIndices().push(modelVertexIndex);
@@ -1497,12 +1757,12 @@ define("engine/core/resourceManagment/loaders/OBJModel", ["require", "exports", 
     };
     exports.default = OBJModel;
 });
-define("engine/rendering/Mesh", ["require", "exports", "engine/core/Display", "engine/core/resourceManagment/MeshResource", "engine/core/Vertex", "engine/core/Util", "engine/core/resourceManagment/loaders/OBJModel"], function (require, exports, Display_3, MeshResource_1, Vertex_2, Util_4, OBJModel_1) {
+define("engine/rendering/Mesh", ["require", "exports", "engine/core/Display", "engine/core/resourceManagment/MeshResource", "engine/core/Vertex", "engine/core/Util", "engine/core/resourceManagment/loaders/OBJModel"], function (require, exports, Display_6, MeshResource_1, Vertex_2, Util_5, OBJModel_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class Mesh {
         constructor(fileName) {
-            this.gl = Display_3.default.gl;
+            this.gl = Display_6.default.gl;
             this.m_fileName = fileName;
             const oldResource = Mesh.s_loadedModels.get(fileName);
             if (oldResource != undefined) {
@@ -1530,9 +1790,9 @@ define("engine/rendering/Mesh", ["require", "exports", "engine/core/Display", "e
             }
             this.m_resource = new MeshResource_1.default(indices.length);
             this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.m_resource.getVbo());
-            this.gl.bufferData(this.gl.ARRAY_BUFFER, Util_4.default.CreateFlippedVertexBuffer(vertices), this.gl.STATIC_DRAW);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, Util_5.default.CreateFlippedVertexBuffer(vertices), this.gl.STATIC_DRAW);
             this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.m_resource.getIbo());
-            this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, Util_4.default.CreateFlippedIntBuffer(indices), this.gl.STATIC_DRAW);
+            this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, Util_5.default.CreateFlippedIntBuffer(indices), this.gl.STATIC_DRAW);
         }
         draw() {
             this.gl.enableVertexAttribArray(0);
@@ -1586,32 +1846,434 @@ define("engine/rendering/Mesh", ["require", "exports", "engine/core/Display", "e
     Mesh.s_loadedModels = new Map();
     exports.default = Mesh;
 });
-define("game/TestGame", ["require", "exports", "engine/core/Game", "engine/rendering/Mesh"], function (require, exports, Game_1, Mesh_1) {
+define("engine/core/resourceManagment/TextureResource", ["require", "exports", "engine/core/Display"], function (require, exports, Display_7) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class TextureResource {
+        constructor() {
+            this.m_id = Display_7.default.gl.createTexture();
+            this.m_refCount = 1;
+        }
+        finalize() {
+        }
+        addReference() {
+            this.m_refCount++;
+        }
+        removeReference() {
+            this.m_refCount--;
+            return this.m_refCount == 0;
+        }
+        getId() { return this.m_id; }
+    }
+    exports.default = TextureResource;
+});
+define("engine/rendering/Texture", ["require", "exports", "engine/core/resourceManagment/TextureResource", "engine/core/resourceManagment/loaders/ResourcesLoader", "engine/core/Display"], function (require, exports, TextureResource_1, ResourcesLoader_2, Display_8) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class Texture {
+        constructor(fileName) {
+            this.gl = Display_8.default.gl;
+            this.m_fileName = fileName;
+            const oldResource = Texture.s_loadedTextures.get(fileName);
+            if (oldResource !== undefined) {
+                this.m_resource = oldResource;
+                this.m_resource.addReference();
+            }
+            else {
+                this.m_resource = this.getTexture(fileName);
+                if (this.m_resource === undefined) {
+                    throw new Error("Error no texture found: " + fileName);
+                }
+                Texture.s_loadedTextures.set(fileName, this.m_resource);
+            }
+        }
+        finalize() {
+            if (this.m_resource === undefined)
+                return;
+            if (this.m_resource.removeReference() && this.m_fileName !== "") {
+                Texture.s_loadedTextures.delete(this.m_fileName);
+            }
+        }
+        bind() {
+            this.bindNum(0);
+        }
+        bindNum(samplerSlot) {
+        }
+        getID() {
+            if (this.m_resource === undefined)
+                return null;
+            return this.m_resource.getId();
+        }
+        getTexture(fileName) {
+            const textureData = ResourcesLoader_2.default.texturesData.get(fileName);
+            const imgElem = document.createElement("img");
+            imgElem.src = window.URL.createObjectURL(textureData);
+            let canvas = document.createElement("canvas");
+            let context = canvas.getContext("2d");
+            if (context === null) {
+                throw new Error("Error generating image data");
+            }
+            context.drawImage(imgElem, 0, 0);
+            const imageData = context.getImageData(0, 0, 512, 512);
+            const resource = new TextureResource_1.default();
+            this.gl.activeTexture(this.gl.TEXTURE0);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, resource.getId());
+            this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, 1);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+            this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, imageData);
+            return resource;
+        }
+    }
+    Texture.s_loadedTextures = new Map();
+    exports.default = Texture;
+});
+define("engine/rendering/Material", ["require", "exports", "engine/core/resourceManagment/MappedValues", "engine/rendering/Texture"], function (require, exports, MappedValues_2, Texture_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class Material extends MappedValues_2.default {
+        constructor(diffuse, specularIntensity = 1, specularPower = 8) {
+            super();
+            this.m_textureHashMap = new Map();
+            this.addTexture("diffuse", diffuse);
+            this.addFloat("specularIntensity", specularIntensity);
+            this.addFloat("specularPower", specularPower);
+        }
+        addTexture(name, texture) { this.m_textureHashMap.set(name, texture); }
+        getTexture(name) {
+            const result = this.m_textureHashMap.get(name);
+            if (result !== undefined)
+                return result;
+            return new Texture_1.default("test.png");
+        }
+    }
+    exports.default = Material;
+});
+define("engine/core/resourceManagment/ShaderResource", ["require", "exports", "engine/core/Display"], function (require, exports, Display_9) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class ShaderResource {
+        constructor() {
+            this.m_program = Display_9.default.gl.createProgram();
+            this.m_refCount = 1;
+            if (this.m_program == 0) {
+                throw new Error("Shader creation failed: Could not find valid memory location in constructor");
+            }
+            this.m_uniforms = new Map();
+            this.m_uniformNames = new Array();
+            this.m_uniformTypes = new Array();
+        }
+        finalize() {
+        }
+        addReference() {
+            this.m_refCount++;
+        }
+        removeReference() {
+            this.m_refCount--;
+            return this.m_refCount == 0;
+        }
+        getProgram() { return this.m_program; }
+        getUniforms() { return this.m_uniforms; }
+        getUniformNames() { return this.m_uniformNames; }
+        getUniformTypes() { return this.m_uniformTypes; }
+    }
+    exports.default = ShaderResource;
+});
+define("engine/rendering/Shader", ["require", "exports", "engine/core/resourceManagment/ShaderResource", "engine/core/Util", "engine/core/Display", "engine/core/resourceManagment/loaders/ResourcesLoader"], function (require, exports, ShaderResource_1, Util_6, Display_10, ResourcesLoader_3) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class Shader {
+        constructor(fileName) {
+            this.gl = Display_10.default.gl;
+            this.m_fileName = fileName;
+            const oldResource = Shader.s_loadedShaders.get(fileName);
+            if (oldResource !== undefined) {
+                this.m_resource = oldResource;
+                this.m_resource.addReference();
+            }
+            else {
+                this.m_resource = new ShaderResource_1.default();
+                const vertexShaderText = Shader.LoadShader(fileName + "Vertex.glsl");
+                const fragmentShaderText = Shader.LoadShader(fileName + "Fragment.glsl");
+                if (vertexShaderText === undefined || fragmentShaderText === undefined) {
+                    throw new Error("Error loading shaders");
+                }
+                this.addVertexShader(vertexShaderText);
+                this.addFragmentShader(fragmentShaderText);
+                this.addAllAttributes(vertexShaderText);
+                this.compileShader();
+                this.addAllUniforms(vertexShaderText);
+                this.addAllUniforms(fragmentShaderText);
+                Shader.s_loadedShaders.set(fileName, this.m_resource);
+            }
+        }
+        finalize() {
+            if (this.m_resource.removeReference() && this.m_fileName !== "") {
+                Shader.s_loadedShaders.delete(this.m_fileName);
+            }
+        }
+        bind() {
+            this.gl.useProgram(this.m_resource.getProgram());
+        }
+        updateUniforms(transform, material, renderingEngine) {
+            const worldMatrix = transform.getTransformation();
+            const MVPMatrix = renderingEngine.getMainCamera().getViewProjection().mul(worldMatrix);
+            for (let i = 0; i < this.m_resource.getUniformNames().length; i++) {
+                const uniformName = this.m_resource.getUniformNames()[i];
+                const uniformType = this.m_resource.getUniformTypes()[i];
+                if (uniformType === "sampler2D") {
+                    const samplerSlot = renderingEngine.getSamplerSlot(uniformName);
+                    if (samplerSlot === undefined) {
+                        throw new Error("Error updating uniform");
+                    }
+                    material.getTexture(uniformName).bind();
+                    this.setUniformi(uniformName, samplerSlot);
+                }
+                else if (uniformName.startsWith("T_")) {
+                    if (uniformName.includes("T_MVP"))
+                        this.setUniformm(uniformName, MVPMatrix);
+                    else if (uniformName.includes("T_model"))
+                        this.setUniformm(uniformName, worldMatrix);
+                    else
+                        throw new Error(uniformName + " is not a valid component of Transform");
+                }
+                else if (uniformName.startsWith("R_")) {
+                    const unprefixedUniformName = uniformName.substring(2);
+                    if (uniformType.includes("vec3"))
+                        this.setUniformv(uniformName, renderingEngine.getVector3f(unprefixedUniformName));
+                    else if (uniformType.includes("float"))
+                        this.setUniformf(uniformName, renderingEngine.getFloat(unprefixedUniformName));
+                }
+                else if (uniformName.startsWith("C_")) {
+                    if (uniformName.includes("C_eyePos"))
+                        this.setUniformv(uniformName, renderingEngine.getMainCamera().getTransform().getTransformedPos());
+                    else
+                        throw new Error(uniformName + " is not a valid component of Camera");
+                }
+                else {
+                    if (uniformType.includes("vec3"))
+                        this.setUniformv(uniformName, material.getVector3f(uniformName));
+                    else if (uniformType.includes("float"))
+                        this.setUniformf(uniformName, material.getFloat(uniformName));
+                    else
+                        throw new Error(uniformType + " is not a supported type in Material");
+                }
+            }
+        }
+        addAllAttributes(shaderText) {
+            const ATTRIBUTE_KEYWORD = "attribute";
+            let attributeStartLocation = shaderText.indexOf(ATTRIBUTE_KEYWORD);
+            let attribNumber = 0;
+            while (attributeStartLocation != -1) {
+                if (!(attributeStartLocation != 0
+                    && (Util_6.default.isWhitespace(shaderText.charAt(attributeStartLocation - 1)) || shaderText.charAt(attributeStartLocation - 1) == ';')
+                    && Util_6.default.isWhitespace(shaderText.charAt(attributeStartLocation + ATTRIBUTE_KEYWORD.length)))) {
+                    attributeStartLocation = shaderText.indexOf(ATTRIBUTE_KEYWORD, attributeStartLocation + ATTRIBUTE_KEYWORD.length);
+                    continue;
+                }
+                const begin = attributeStartLocation + ATTRIBUTE_KEYWORD.length + 1;
+                const end = shaderText.indexOf(";", begin);
+                const attributeLine = shaderText.substring(begin, end).trim();
+                const attributeName = attributeLine.substring(attributeLine.indexOf(' ') + 1, attributeLine.length).trim();
+                this.setAttribLocation(attributeName, attribNumber);
+                attribNumber++;
+                attributeStartLocation = shaderText.indexOf(ATTRIBUTE_KEYWORD, attributeStartLocation + ATTRIBUTE_KEYWORD.length);
+            }
+        }
+        findUniformStructs(shaderText) {
+            const result = new Map();
+            const STRUCT_KEYWORD = "struct";
+            let structStartLocation = shaderText.indexOf(STRUCT_KEYWORD);
+            while (structStartLocation != -1) {
+                if (!(structStartLocation != 0
+                    && (Util_6.default.isWhitespace(shaderText.charAt(structStartLocation - 1)) || shaderText.charAt(structStartLocation - 1) == ';')
+                    && Util_6.default.isWhitespace(shaderText.charAt(structStartLocation + STRUCT_KEYWORD.length)))) {
+                    structStartLocation = shaderText.indexOf(STRUCT_KEYWORD, structStartLocation + STRUCT_KEYWORD.length);
+                    continue;
+                }
+                const nameBegin = structStartLocation + STRUCT_KEYWORD.length + 1;
+                const braceBegin = shaderText.indexOf("{", nameBegin);
+                const braceEnd = shaderText.indexOf("}", braceBegin);
+                const structName = shaderText.substring(nameBegin, braceBegin).trim();
+                const glslStructs = new Array();
+                let componentSemicolonPos = shaderText.indexOf(";", braceBegin);
+                while (componentSemicolonPos != -1 && componentSemicolonPos < braceEnd) {
+                    let componentNameEnd = componentSemicolonPos + 1;
+                    while (Util_6.default.isWhitespace(shaderText.charAt(componentNameEnd - 1)) || shaderText.charAt(componentNameEnd - 1) == ';')
+                        componentNameEnd--;
+                    let componentNameStart = componentSemicolonPos;
+                    while (!Util_6.default.isWhitespace(shaderText.charAt(componentNameStart - 1)))
+                        componentNameStart--;
+                    let componentTypeEnd = componentNameStart;
+                    while (Util_6.default.isWhitespace(shaderText.charAt(componentTypeEnd - 1)))
+                        componentTypeEnd--;
+                    let componentTypeStart = componentTypeEnd;
+                    while (!Util_6.default.isWhitespace(shaderText.charAt(componentTypeStart - 1)))
+                        componentTypeStart--;
+                    const componentName = shaderText.substring(componentNameStart, componentNameEnd);
+                    const componentType = shaderText.substring(componentTypeStart, componentTypeEnd);
+                    const glslStruct = new GLSLStruct();
+                    glslStruct.name = componentName;
+                    glslStruct.type = componentType;
+                    glslStructs.push(glslStruct);
+                    componentSemicolonPos = shaderText.indexOf(";", componentSemicolonPos + 1);
+                }
+                result.set(structName, glslStructs);
+                structStartLocation = shaderText.indexOf(STRUCT_KEYWORD, structStartLocation + STRUCT_KEYWORD.length);
+            }
+            return result;
+        }
+        addAllUniforms(shaderText) {
+            const structs = this.findUniformStructs(shaderText);
+            const UNIFORM_KEYWORD = "uniform";
+            let uniformStartLocation = shaderText.indexOf(UNIFORM_KEYWORD);
+            while (uniformStartLocation != -1) {
+                if (!(uniformStartLocation != 0
+                    && (Util_6.default.isWhitespace(shaderText.charAt(uniformStartLocation - 1)) || shaderText.charAt(uniformStartLocation - 1) == ';')
+                    && Util_6.default.isWhitespace(shaderText.charAt(uniformStartLocation + UNIFORM_KEYWORD.length)))) {
+                    uniformStartLocation = shaderText.indexOf(UNIFORM_KEYWORD, uniformStartLocation + UNIFORM_KEYWORD.length);
+                    continue;
+                }
+                const begin = uniformStartLocation + UNIFORM_KEYWORD.length + 1;
+                const end = shaderText.indexOf(";", begin);
+                const uniformLine = shaderText.substring(begin, end).trim();
+                const whiteSpacePos = uniformLine.indexOf(' ');
+                const uniformName = uniformLine.substring(whiteSpacePos + 1, uniformLine.length).trim();
+                const uniformType = uniformLine.substring(0, whiteSpacePos).trim();
+                this.m_resource.getUniformNames().push(uniformName);
+                this.m_resource.getUniformTypes().push(uniformType);
+                this.addUniform(uniformName, uniformType, structs);
+                uniformStartLocation = shaderText.indexOf(UNIFORM_KEYWORD, uniformStartLocation + UNIFORM_KEYWORD.length);
+            }
+        }
+        addUniform(uniformName, uniformType, structs) {
+            let addThis = true;
+            const structComponents = structs.get(uniformType);
+            if (structComponents !== undefined) {
+                addThis = false;
+                const instance = this;
+                structComponents.forEach(struct => {
+                    instance.addUniform(uniformName + "." + struct.name, struct.type, structs);
+                });
+            }
+            if (!addThis)
+                return;
+            const uniformLocation = this.gl.getUniformLocation(this.m_resource.getProgram(), uniformName);
+            if (uniformLocation == 0xFFFFFFFF || uniformLocation === null) {
+                throw new Error("Error: Could not find uniform: " + uniformName);
+            }
+            this.m_resource.getUniforms().set(uniformName, uniformLocation);
+        }
+        addVertexShader(text) {
+            this.addProgram(text, this.gl.VERTEX_SHADER);
+        }
+        addFragmentShader(text) {
+            this.addProgram(text, this.gl.FRAGMENT_SHADER);
+        }
+        setAttribLocation(attributeName, location) {
+            this.gl.bindAttribLocation(this.m_resource.getProgram(), location, attributeName);
+        }
+        compileShader() {
+            this.gl.linkProgram(this.m_resource.getProgram());
+            if (this.gl.getProgramParameter(this.m_resource.getProgram(), this.gl.LINK_STATUS) == 0) {
+                throw new Error("" + this.m_resource.getProgram());
+            }
+            this.gl.validateProgram(this.m_resource.getProgram());
+            if (this.gl.getProgramParameter(this.m_resource.getProgram(), this.gl.VALIDATE_STATUS) == 0) {
+                throw new Error("" + this.m_resource.getProgram());
+            }
+        }
+        addProgram(text, type) {
+            const shader = this.gl.createShader(type);
+            if (shader === null) {
+                throw new Error("Shader creation failed: Could not find valid memory location when adding shader");
+            }
+            this.gl.shaderSource(shader, text);
+            this.gl.compileShader(shader);
+            if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+                throw new Error("" + this.gl.getShaderInfoLog(shader));
+            }
+            this.gl.attachShader(this.m_resource.getProgram(), shader);
+        }
+        static LoadShader(fileName) {
+            return ResourcesLoader_3.default.shadersData.get(fileName);
+        }
+        setUniformi(uniformName, value) {
+            this.gl.uniform1i(this.m_resource.getUniforms().get(uniformName), value);
+        }
+        setUniformf(uniformName, value) {
+            this.gl.uniform1f(this.m_resource.getUniforms().get(uniformName), value);
+        }
+        setUniformv(uniformName, value) {
+            this.gl.uniform3f(this.m_resource.getUniforms().get(uniformName), value.getX(), value.getY(), value.getZ());
+        }
+        setUniformm(uniformName, value) {
+            this.gl.uniformMatrix4fv(this.m_resource.getUniforms().get(uniformName), true, Util_6.default.CreateFlippedMatrixBuffer(value));
+        }
+    }
+    Shader.s_loadedShaders = new Map();
+    exports.default = Shader;
+    class GLSLStruct {
+    }
+});
+define("engine/components/MeshRenderer", ["require", "exports", "engine/components/GameComponent"], function (require, exports, GameComponent_4) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class MeshRenderer extends GameComponent_4.default {
+        constructor(mesh, material, shader) {
+            super();
+            this.m_mesh = mesh;
+            this.m_material = material;
+            this.m_shader = shader;
+        }
+        setShader(shader) {
+            this.m_shader = shader;
+        }
+        render(renderingEngine) {
+            super.render(renderingEngine);
+            this.m_shader.bind();
+            this.m_shader.updateUniforms(this.getTransform(), this.m_material, renderingEngine);
+            this.m_mesh.draw();
+        }
+    }
+    exports.default = MeshRenderer;
+});
+define("game/TestGame", ["require", "exports", "engine/core/Game", "engine/rendering/Mesh", "engine/core/GameObject", "engine/rendering/Material", "engine/rendering/Texture", "engine/components/MeshRenderer", "engine/math/Vector3f", "engine/rendering/Shader", "engine/math/Matrix4f", "engine/components/Camera3D"], function (require, exports, Game_1, Mesh_1, GameObject_2, Material_1, Texture_2, MeshRenderer_1, Vector3f_10, Shader_1, Matrix4f_4, Camera3D_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class TestGame extends Game_1.default {
         constructor() {
             super();
-            const mesh = new Mesh_1.default("cube.obj");
+            const cubeMesh = new Mesh_1.default("cube.obj");
+            const material = new Material_1.default(new Texture_2.default("UV_Grid.jpg"));
+            const shader = new Shader_1.default("basic");
+            const meshRenderer = new MeshRenderer_1.default(cubeMesh, material, shader);
+            const cubeObject = new GameObject_2.default("cube").addComponent(meshRenderer);
+            cubeObject.getTransform().setPos(new Vector3f_10.default(0, 0, 20));
+            const cam = new Camera3D_1.default(new Matrix4f_4.default().initPerspective());
+            const cameraObject = new GameObject_2.default("camera").addComponent(cam);
+            this.addObject(cameraObject);
+            this.addObject(cubeObject);
         }
     }
     exports.default = TestGame;
 });
-define("game/Main", ["require", "exports", "engine/core/CoreEngine", "engine/core/Display", "game/TestGame", "engine/core/resourceManagment/loaders/ResourcesLoader", "engine/core/Util"], function (require, exports, CoreEngine_1, Display_4, TestGame_1, ResourcesLoader_2, Util_5) {
+define("game/Main", ["require", "exports", "engine/core/CoreEngine", "engine/core/Display", "game/TestGame", "engine/core/resourceManagment/loaders/ResourcesLoader", "engine/core/Util"], function (require, exports, CoreEngine_1, Display_11, TestGame_1, ResourcesLoader_4, Util_7) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class Main {
         static init(autostart = true) {
-            Util_5.default.loadJSONFile(ResourcesLoader_2.default.URL + "resources.json")
+            Util_7.default.loadJSONFile(ResourcesLoader_4.default.URL + "resources.json")
                 .then((result) => {
-                return ResourcesLoader_2.default.loadResources(result);
+                return ResourcesLoader_4.default.loadResources(result);
             })
                 .then(loaded => {
-                Display_4.default.create(new Display_4.DisplayMode(800, 600, 60));
-                Display_4.default.setTitle("Gizmo Bomba 3D");
-                Main.engine = new CoreEngine_1.default(Display_4.default.getDisplayMode());
-                Main.engine.setGame(new TestGame_1.default());
-                this.start();
+                Display_11.default.create(new Display_11.DisplayMode(800, 600, 60));
+                Display_11.default.setTitle("Gizmo Bomba 3D");
+                Main.engine = new CoreEngine_1.default(Display_11.default.getDisplayMode(), new TestGame_1.default());
+                Main.start();
             });
         }
         static start() {

@@ -9,16 +9,21 @@ export default class GameObject {
 	private m_children: Array<GameObject>;
 	private m_components: Array<GameComponent>;
 	private m_transform: Transform;
-	private m_engine: CoreEngine;
+	private m_engine: CoreEngine | null;
+	public m_name:string;
 
-	constructor() {
+	constructor(name:string="root") {
+
 		this.m_children = new Array<GameObject>();
 		this.m_components = new Array<GameComponent>();
 		this.m_transform = new Transform();
-		// this.m_engine = null;
+		this.m_name = name;
+		this.m_engine = null;
 	}
 
 	public addChild(child: GameObject): GameObject {
+		
+		console.log(child.m_name)
 		this.m_children.push(child);
 		child.setEngine(this.m_engine);
 		child.getTransform().setParent(this.m_transform);
@@ -27,6 +32,7 @@ export default class GameObject {
 	}
 
 	public addComponent(component: GameComponent): GameObject {
+
 		this.m_components.push(component);
 		component.setParent(this);
 
@@ -45,14 +51,12 @@ export default class GameObject {
 		this.update(delta);
 
 		for (let i: number = 0; i < this.m_children.length; i++) {
-
 			this.m_children[i].updateAll(delta);
 		}
 	}
 
 	public renderAll(renderingEngine: RenderingEngine): void {
 		this.render(renderingEngine);
-
 		for (let i: number = 0; i < this.m_children.length; i++) {
 			this.m_children[i].renderAll(renderingEngine);
 		}
@@ -74,6 +78,7 @@ export default class GameObject {
 	}
 
 	public render(renderingEngine: RenderingEngine): void {
+
 		for (let i: number = 0; i < this.m_components.length; i++) {
 			this.m_components[i].render(renderingEngine);
 		}
@@ -95,8 +100,15 @@ export default class GameObject {
 		return this.m_transform;
 	}
 
-	public setEngine(engine: CoreEngine): void {
-		if (this.m_engine != engine) {
+	public setEngine(engine: CoreEngine | null): void {
+		console.log(engine);
+
+		if(engine === null) {
+			throw new Error("Error: No valid engine");
+		}
+		console.log("here");
+
+		if (this.m_engine !== engine) {
 			this.m_engine = engine;
 
 			for (let i: number = 0; i < this.m_components.length; i++) {

@@ -66,6 +66,7 @@ export default class Mesh {
     }
 
     public draw(): void {
+
         this.gl.enableVertexAttribArray(0);
         this.gl.enableVertexAttribArray(1);
         this.gl.enableVertexAttribArray(2);

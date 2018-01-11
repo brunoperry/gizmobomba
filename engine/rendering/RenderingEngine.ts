@@ -52,7 +52,7 @@ export default class RenderingEngine extends MappedValues {
 		}
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 
-		// object.RenderAll(this.m_forwardAmbient, this);
+		object.renderAll(this);
 
 		this.gl.enable(this.gl.BLEND);
 		this.gl.blendFunc(this.gl.ONE, this.gl.ONE);
@@ -90,6 +90,7 @@ export default class RenderingEngine extends MappedValues {
 
 	public addCamera(camera: Camera3D): void {
 		this.m_mainCamera = camera;
+		console.log(this.m_mainCamera)
 	}
 
 	public getSamplerSlot(samplerName: string): number | undefined {
@@ -101,6 +102,7 @@ export default class RenderingEngine extends MappedValues {
 	// }
 
 	public getMainCamera(): Camera3D {
+
 		return this.m_mainCamera;
 	}
 

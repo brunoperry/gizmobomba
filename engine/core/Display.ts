@@ -55,6 +55,18 @@ export default class Display {
         return version;
     }
 
+    public static getWidth():number {
+        return Display.getDisplayMode().getWidth();
+    }
+
+    public static getHeight():number {
+        return Display.getDisplayMode().getHeight();
+    }
+
+    public static getAspectRatio():number {
+        return Display.getDisplayMode().getWidth() / Display.getDisplayMode().getHeight();
+    }
+
     public static getDisplayMode(): DisplayMode {
 
         return Display.displayMode;

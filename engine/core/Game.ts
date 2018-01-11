@@ -17,19 +17,22 @@ export default abstract class Game {
 	}
 
 	public render(renderingEngine: RenderingEngine): void {
+
 		renderingEngine.render(this.getRootObject());
 	}
 
 	public addObject(object: GameObject): void {
+
+		console.log(object.m_name)
 		this.getRootObject().addChild(object);
 	}
 
 	private getRootObject(): GameObject {
 		if (this.m_root == null)
 			this.m_root = new GameObject();
-			
+
 		return this.m_root;
 	}
 
-	public SetEngine(engine: CoreEngine): void { this.getRootObject().setEngine(engine); }
+	public setEngine(engine: CoreEngine): void { this.getRootObject().setEngine(engine); }
 }

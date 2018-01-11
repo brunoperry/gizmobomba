@@ -3,7 +3,55 @@ export default class ResourcesLoader {
     public static URL: string = "resources/";
     public static modelsData: Map<string, string> = new Map<string, string>();
     public static shadersData: Map<string, string> = new Map<string, string>();
-    public static texturesData: Map<string, string> = new Map<string, string>();
+    public static texturesData: Map<string, Blob> = new Map<string, Blob>();
+
+    private static async loadModels(models:Array<string>):Promise<boolean> {
+
+        return Promise.all(models.map(url =>
+            fetch(ResourcesLoader.URL + url).then(resp => resp.text())
+        )).then((mData) => {
+
+            let key: string;
+            for (let i: number = 0; i < mData.length; i++) {
+                key = models[i].split("/")[1];
+                ResourcesLoader.modelsData.set(key, mData[i]);
+            }
+            return true;
+        })
+        .catch(error => {
+            return false;
+        });
+    }
+    private static async loadShaders(shaders:Array<string>):Promise<boolean> {
+
+        return Promise.all(shaders.map(url =>
+            fetch(ResourcesLoader.URL + url).then(resp => resp.text())
+        )).then(sData => {
+
+            let key: string;
+            for (let i: number = 0; i < sData.length; i++) {
+                key = shaders[i].split("/")[1];
+                ResourcesLoader.shadersData.set(key, sData[i]);
+            }
+            return true;
+        })
+        .catch(error => {
+            return false;
+        });
+    }
+    private static async loadTextures(textures:Array<string>):Promise<boolean> {
+
+        return Promise.all(textures.map(url => 
+            fetch(ResourcesLoader.URL + url).then(resp => resp.blob())
+        )).then(tData => {
+            let key: string;
+            for (let i: number = 0; i < tData.length; i++) {
+                key = textures[i].split("/")[1];
+                ResourcesLoader.texturesData.set(key, tData[i]);
+            }
+            return true;
+        });
+    }
 
     public static async loadResources(json: any): Promise<boolean> {
 
@@ -24,41 +72,49 @@ export default class ResourcesLoader {
             textures.push(json.textures.path + json.textures.files[i]);
         }
 
-        return Promise.all(models.map(url =>
-            fetch(ResourcesLoader.URL + url).then(resp => resp.text())
-        )).then((mData) => {
-
-            let key: string;
-            for (let i: number = 0; i < mData.length; i++) {
-                key = models[i].split("/")[1];
-                ResourcesLoader.modelsData.set(key, mData[i]);
-            }
-
-            return Promise.all(shaders.map(url =>
-                fetch(ResourcesLoader.URL + url).then(resp => resp.text())
-            )).then(sData => {
-
-                for (let i: number = 0; i < sData.length; i++) {
-                    key = shaders[i].split("/")[1];
-                    ResourcesLoader.shadersData.set(key, sData[i]);
-                }
-
-                return Promise.all(textures.map(url =>
-
-                    fetch(ResourcesLoader.URL + url).then(resp => resp.blob())
-                )).then(tData => {
-
-                    for (let i: number = 0; i < tData.length; i++) {
-
-                        key = textures[i].split("/")[1];
-
-                        ResourcesLoader.texturesData.set(key, textures[i]);
-                    }
-                    return true;
-                });
-            });
-        }).catch((error) => {
-            return false;
+        return ResourcesLoader.loadModels(models)
+        .then((res) => {
+            return ResourcesLoader.loadShaders(shaders)
+        })
+        .then(res => {
+            return ResourcesLoader.loadTextures(textures);
         });
+
+        // return Promise.all(models.map(url =>
+        //     fetch(ResourcesLoader.URL + url).then(resp => resp.text())
+        // )).then((mData) => {
+
+        //     let key: string;
+        //     for (let i: number = 0; i < mData.length; i++) {
+        //         key = models[i].split("/")[1];
+        //         ResourcesLoader.modelsData.set(key, mData[i]);
+        //     }
+
+        //     return Promise.all(shaders.map(url =>
+        //         fetch(ResourcesLoader.URL + url).then(resp => resp.text())
+        //     )).then(sData => {
+
+        //         for (let i: number = 0; i < sData.length; i++) {
+        //             key = shaders[i].split("/")[1];
+        //             ResourcesLoader.shadersData.set(key, sData[i]);
+        //         }
+
+        //         return Promise.all(textures.map(url =>
+
+        //             fetch(ResourcesLoader.URL + url).then(resp => resp.blob())
+        //         )).then(tData => {
+
+        //             for (let i: number = 0; i < tData.length; i++) {
+
+        //                 key = textures[i].split("/")[1];
+
+        //                 ResourcesLoader.texturesData.set(key, textures[i]);
+        //             }
+        //             return true;
+        //         });
+        //     });
+        // }).catch((error) => {
+        //     return false;
+        // });
     }
 }

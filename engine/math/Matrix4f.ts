@@ -1,5 +1,6 @@
 import Util from "../core/Util";
 import Vector3f from "./Vector3f";
+import Display from "../core/Display";
 
 export default class Matrix4f {
 
@@ -69,7 +70,12 @@ export default class Matrix4f {
 		return this;
 	}
 
-	public initPerspective(fov: number, aspectRatio: number, zNear: number, zFar: number): Matrix4f {
+	public initPerspective(
+		fov: number = 70,
+		aspectRatio: number = Display.getAspectRatio(),
+		zNear: number = 0.1,
+		zFar: number = 1000
+	): Matrix4f {
 		const tanHalfFOV: number = Math.tan(fov / 2);
 		const zRange: number = zNear - zFar;
 

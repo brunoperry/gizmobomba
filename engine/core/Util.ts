@@ -7,6 +7,10 @@ export default class Util {
         return degrees * Math.PI / 180;
     }
 
+    public static isWhitespace(char:string) : boolean {
+        return /\S/.test(char);
+    }
+
     public static async loadJSONFile(url: string): Promise<JSON> {
         let response = await fetch(url);
         return await response.json();
@@ -23,50 +27,28 @@ export default class Util {
 
     public static CreateFlippedVertexBuffer(vertices: Array<Vertex>): Float32Array {
 
-        // const pos: Array<number> = new Array<number>();
-        // const texCoords: Array<number> = new Array<number>();
-        // const normals: Array<number> = new Array<number>();
-        // const tangents: Array<number> = new Array<number>();
+        const values: Array<number> = new Array<number>();
 
-        // for(let i:number = 0; i < vertices.length; i++) {
+        for(let i:number = 0; i < vertices.length; i++) {
 
-        //     pos.push(vertices[i].getPos().getX());
-        //     pos.push(vertices[i].getPos().getY());
-        //     pos.push(vertices[i].getPos().getZ());
+            values.push(vertices[i].getPos().getX());
+            values.push(vertices[i].getPos().getY());
+            values.push(vertices[i].getPos().getZ());
 
-        //     texCoords.push(vertices[i].getTexCoord().getX());
-        //     texCoords.push(vertices[i].getTexCoord().getY());
+            values.push(vertices[i].getTexCoord().getX());
+            values.push(vertices[i].getTexCoord().getY());
 
-        //     normals.push(vertices[i].getNormal().getX());
-        //     normals.push(vertices[i].getNormal().getY());
-        //     normals.push(vertices[i].getNormal().getZ());
+            values.push(vertices[i].getNormal().getX());
+            values.push(vertices[i].getNormal().getY());
+            values.push(vertices[i].getNormal().getZ());
 
-        //     tangents.push(vertices[i].getTangent().getX());
-        //     tangents.push(vertices[i].getTangent().getY());
-        //     tangents.push(vertices[i].getTangent().getZ());
-        // }
-
-        // const buffer: Float32Array = new Float32Array(vertices.length * Vertex.SIZE);
-        // buffer.set([], new Float32Array(pos));
-
-        const buffer: Float32Array = new Float32Array(vertices.length * Vertex.SIZE);
-        console.log(buffer.length)
-        for (let i: number = 0; i < vertices.length; i++) {
-
-            console.log(i)
-            buffer.set([], vertices[i].getPos().getX());
-            buffer.set([], vertices[i].getPos().getY());
-            buffer.set([], vertices[i].getPos().getZ());
-            buffer.set([], vertices[i].getTexCoord().getX());
-            buffer.set([], vertices[i].getTexCoord().getY());
-            buffer.set([], vertices[i].getNormal().getX());
-            buffer.set([], vertices[i].getNormal().getY());
-            buffer.set([], vertices[i].getNormal().getZ());
-            buffer.set([], vertices[i].getTangent().getX());
-            buffer.set([], vertices[i].getTangent().getY());
-            buffer.set([], vertices[i].getTangent().getZ());
+            values.push(vertices[i].getTangent().getX());
+            values.push(vertices[i].getTangent().getY());
+            values.push(vertices[i].getTangent().getZ());
         }
 
+        const buffer: Float32Array = new Float32Array(vertices.length * Vertex.SIZE);
+        buffer.set(values);
         buffer.reverse();
 
         return buffer;

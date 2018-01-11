@@ -2,6 +2,8 @@ import Display, { DisplayMode, RenderMode } from "./Display";
 import RenderingEngine from "../rendering/RenderingEngine";
 import Game from "./Game";
 import Time from "./Time";
+import Input from "../input/Input";
+import Keyboard from "../input/Keyboard";
 
 export default class CoreEngine {
 
@@ -17,19 +19,23 @@ export default class CoreEngine {
      * @param display DisplayMode, object with canvas properties
      * @param framerate number, frame rate for the engine
      */
-	constructor(display: DisplayMode) {
+	constructor(display: DisplayMode, game:Game) {
 
 		this.m_isRunning = false;
 		this.m_width = display.getWidth();
 		this.m_height = display.getHeight();
-		this.m_frameTime = 1.0 / display.getFrameRate();
+        this.m_frameTime = 1.0 / display.getFrameRate();
+        this.m_game = game;
+		game.setEngine(this);
 
 		this.m_renderingEngine = new RenderingEngine();
 	}
 
-	public setGame(game: Game): void {
-		this.m_game = game;
-	}
+	// public setGame(game: Game): void {
+    //     console.log(game)
+    //     this.m_game = game;
+    //     game.setEngine(this);
+	// }
 
 	public createRendering(title: string): void {
 		
@@ -38,7 +44,7 @@ export default class CoreEngine {
 	public start(): void {
 		if (this.m_isRunning) return;
 
-		this.run();
+        this.run();
 	}
 
 	public stop(): void {
@@ -83,11 +89,13 @@ export default class CoreEngine {
                 Time.setDelta(instance.m_frameTime);
                 
                 instance.m_game.input(Time.getDelta());
+                Input.update();
+                
                 instance.m_game.update(Time.getDelta());
 
-                // if(Input.getKey(Keyboard.ESCAPE)) {
-                //     instance.stop();
-                // }
+                if(Input.getKey(Keyboard.ESCAPE)) {
+                    instance.stop();
+                }
 
                 if(frameCounter >= Time.SECOND) {
 
@@ -98,7 +106,7 @@ export default class CoreEngine {
             }
 
             if(render) {
-                // instance.render();
+                instance.m_game.render(instance.m_renderingEngine);
                 frames++;
             }
         }

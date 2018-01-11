@@ -14,9 +14,7 @@
         "path": "shaders/",
         "files": [
             "basicFragment.glsl",
-            "basicVertex.glsl",
-            "phongVertex.glsl",
-            "phongFragment.glsl"
+            "basicVertex.glsl"
         ]
     },
     "textures": {
