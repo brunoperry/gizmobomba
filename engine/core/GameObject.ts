@@ -103,11 +103,6 @@ export default class GameObject {
 
 	public setEngine(engine: CoreEngine | null): void {
 
-		// if(engine === null) {
-		// 	throw new Error("Error: No valid engine");
-		// }
-		// console.log("here");
-
 		if (this.m_engine !== engine && engine !== null) {
 			this.m_engine = engine;
 

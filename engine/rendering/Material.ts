@@ -1,30 +1,27 @@
 import MappedValues from "../core/resourceManagment/MappedValues";
 import Texture from "./Texture";
+import Shader from "./Shader";
+import Vector3f from "../math/Vector3f";
 
-export default class Material extends MappedValues {
-    private m_textureHashMap: Map<string, Texture>;
+export default class Material {
 
-    constructor(
-        diffuse: Texture,
-        specularIntensity: number = 1,
-        specularPower: number = 8
-    ) {
+    private m_texture: Texture;
+    private m_shader: Shader;
+    private m_color:Vector3f = new Vector3f(1,1,1);
 
-        super();
-        this.m_textureHashMap = new Map<string, Texture>();
-        this.addTexture("diffuse", diffuse);
-        this.addFloat("specularIntensity", specularIntensity);
-        this.addFloat("specularPower", specularPower);
+    constructor(texture: Texture = new Texture("UV_Grid.jpg"), shader: Shader = new Shader("basic")) {
+
+        this.m_texture = texture;
+        this.m_shader = shader;
     }
 
-    public addTexture(name: string, texture: Texture): void { this.m_textureHashMap.set(name, texture); }
-
-    public getTexture(name: string): Texture {
-
-        const result:Texture | undefined = this.m_textureHashMap.get(name);
-        if (result !== undefined)
-            return result;
-
-        return new Texture("test.png");
+    public getTexture(): Texture {
+        return this.m_texture;
+    }
+    public getShader(): Shader {
+        return this.m_shader;
+    }
+    public getColor(): Vector3f {
+        return this.m_color;
     }
 }

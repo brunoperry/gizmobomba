@@ -8,6 +8,7 @@ import Vector3f from "../engine/math/Vector3f";
 import Shader from "../engine/rendering/Shader";
 import Matrix4f from "../engine/math/Matrix4f";
 import Camera3D from "../engine/components/Camera3D";
+import Vector2f from "../engine/math/Vector2f";
 
 export default class TestGame extends Game {
 
@@ -18,21 +19,13 @@ export default class TestGame extends Game {
 
     public init():void {
 
-        const cubeMesh: Mesh = new Mesh("cube.obj");
-        const material: Material = new Material(new Texture("UV_Grid.jpg"));
-        const shader: Shader = new Shader("basic");
-        
-        const meshRenderer: MeshRenderer = new MeshRenderer(
-            cubeMesh,
-            material
-        );
+        const cubeMesh: Mesh = new Mesh();
+        const cubeMaterial: Material = new Material();
 
-        const cubeObject: GameObject = new GameObject("cube").addComponent(meshRenderer);
+        const cube = new GameObject();
+        cube.getTransform().setPos(new Vector3f(0, 0, 20))
+        cube.addComponent(new MeshRenderer(cubeMesh, cubeMaterial));
 
-        const cam: Camera3D = new Camera3D(new Matrix4f().initPerspective());
-        const cameraObject = new GameObject("camera").addComponent(cam);
-
-        this.addObject(cameraObject);
-        this.addObject(cubeObject);
+        this.addObject(cube);
     }
 }

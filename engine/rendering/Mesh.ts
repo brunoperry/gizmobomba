@@ -11,74 +11,123 @@ export default class Mesh {
 
     private gl: WebGL2RenderingContext = Display.gl;
 
-    private static s_loadedModels: Map<string, MeshResource> = new Map<string, MeshResource>();
-    private m_resource: MeshResource;
-    private m_fileName: string;
+    private m_vao: WebGLVertexArrayObject | null;
+    private m_vertices:Float32Array;
+    private m_indices:Int16Array;
+    private m_normals:Float32Array;
+    private m_uvs:Float32Array;
+    private m_tangents:Float32Array;
 
-    constructor(fileName: string) {
+    private m_indexCount: number = 0;
 
-        this.m_fileName = fileName;
-        const oldResource: MeshResource | undefined = Mesh.s_loadedModels.get(fileName);
+    constructor(fileName: string = "cube.obj") {
 
-        if (oldResource !== undefined) {
-            this.m_resource = oldResource;
-            this.m_resource.addReference();
-        }
-        else {
-            this.loadMesh(fileName);
-            Mesh.s_loadedModels.set(fileName, this.m_resource);
-        }
+        this.loadMesh(fileName);
     }
 
-    // public init(program: WebGLProgram, vertices: Array<Vertex>, indices: Array<number>, calcNormals: boolean): Mesh {
-    //     this.m_program = program;
-    //     this.m_fileName = " ";
-    //     this.addVertices(vertices, indices, calcNormals);
+    public init(program: WebGLProgram): void {
 
-    //     return this;
-    // }
+        const vertexAttributeLocation : number = this.gl.getAttribLocation(program, "a_position");
+        const texCoordAttributeLocation : number = this.gl.getAttribLocation(program, "a_texcoord");
+        const normalAttributeLocation : number = this.gl.getAttribLocation(program, "a_normal");
 
-    protected finalize(): void {
-        if (this.m_resource.removeReference() && !(this.m_fileName === " ")) {
-            Mesh.s_loadedModels.delete(this.m_fileName);
-        }
+        //Setup Indices.
+        const ibo:WebGLBuffer | null = this.gl.createBuffer();
+        this.m_indexCount = this.m_indices.length;
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, ibo);  
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.m_indices, this.gl.STATIC_DRAW);
+
+		//Set up vertices
+        const vbo:WebGLBuffer | null = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vbo);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.m_vertices, this.gl.STATIC_DRAW);
+        this.gl.enableVertexAttribArray(vertexAttributeLocation);
+        this.gl.vertexAttribPointer(vertexAttributeLocation, 3, this.gl.FLOAT, false, 0, 0);
+        
+        //Setup UV
+        const UVbo:WebGLBuffer | null = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, UVbo);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.m_uvs, this.gl.STATIC_DRAW);
+        this.gl.enableVertexAttribArray(texCoordAttributeLocation);
+        this.gl.vertexAttribPointer(texCoordAttributeLocation, 2, this.gl.FLOAT, true, 0, 0);
+
+        //Setup normals
+        console.log(normalAttributeLocation)
+        const nbo:WebGLBuffer | null = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, nbo);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.m_normals, this.gl.STATIC_DRAW);
+        this.gl.enableVertexAttribArray(normalAttributeLocation);
+        this.gl.vertexAttribPointer(normalAttributeLocation, 3, this.gl.FLOAT, false, 0, 0);
+
+        this.m_vao =  this.gl.createVertexArray();
+        this.gl.bindVertexArray(this.m_vao);
+
+        //SET vertex buffer to VAO
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vbo);
+        this.gl.enableVertexAttribArray(vertexAttributeLocation);
+        this.gl.vertexAttribPointer(vertexAttributeLocation, 3, this.gl.FLOAT, false, 0, 0);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
+        
+        //SET texture buffer to VAO
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, UVbo);
+        this.gl.enableVertexAttribArray(texCoordAttributeLocation);
+        this.gl.vertexAttribPointer(texCoordAttributeLocation, 2, this.gl.FLOAT, true, 0, 0);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
+
+        //SET normals buffer to VAO
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, nbo);
+        this.gl.enableVertexAttribArray(normalAttributeLocation);
+        this.gl.vertexAttribPointer(normalAttributeLocation, 3, this.gl.HALF_FLOAT, false, 0, 0);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
+
+        //SET indices buffer to VAO
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, ibo);
+
+        this.gl.bindVertexArray(null);
     }
+
 
     private addVertices(vertices: Array<Vertex>, indices: Array<number>, calcNormals: boolean): void {
         if (calcNormals) {
             this.calcNormals(vertices, indices);
         }
 
-        this.m_resource = new MeshResource(indices.length);
+        const verts: Array<number> = new Array<number>();
+        const norms: Array<number> = new Array<number>();
+        const uvs: Array<number> = new Array<number>();
+        const tans: Array<number> = new Array<number>();
+        let vrt: Vertex;
+        for (let i: number = 0; i < indices.length; i++) {
 
+            vrt = vertices[indices[i]];
+            verts.push(vrt.getPos().getX());
+            verts.push(vrt.getPos().getY());
+            verts.push(vrt.getPos().getZ());
 
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.m_resource.getVbo());
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, Util.CreateFlippedVertexBuffer(vertices), this.gl.STATIC_DRAW);
+            norms.push(vrt.getNormal().getX());
+            norms.push(vrt.getNormal().getY());
+            norms.push(vrt.getNormal().getZ());
 
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.m_resource.getIbo());
-        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, Util.CreateFlippedIntBuffer(indices), this.gl.STATIC_DRAW);
+            uvs.push(vrt.getTexCoord().getX());
+            uvs.push(vrt.getTexCoord().getY());
+
+            tans.push(vrt.getTangent().getX());
+            tans.push(vrt.getTangent().getY());
+            tans.push(vrt.getTangent().getZ());
+        }
+
+        this.m_indices = new Int16Array(indices);
+        this.m_vertices = new Float32Array(verts);
+        this.m_uvs = new Float32Array(uvs);
+        this.m_normals = new Float32Array(norms);
+        this.m_tangents = new Float32Array(tans);
     }
 
     public draw(): void {
 
-        this.gl.enableVertexAttribArray(0);
-        this.gl.enableVertexAttribArray(1);
-        this.gl.enableVertexAttribArray(2);
-        this.gl.enableVertexAttribArray(3);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.m_resource.getVbo());
-        this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, Vertex.SIZE * 4, 0);
-        this.gl.vertexAttribPointer(1, 2, this.gl.FLOAT, false, Vertex.SIZE * 4, 12);
-        this.gl.vertexAttribPointer(2, 3, this.gl.FLOAT, false, Vertex.SIZE * 4, 20);
-        this.gl.vertexAttribPointer(3, 3, this.gl.FLOAT, false, Vertex.SIZE * 4, 32);
-
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.m_resource.getIbo());
-        this.gl.drawElements(this.gl.TRIANGLES, this.m_resource.getSize(), this.gl.UNSIGNED_INT, 0);
-
-        this.gl.disableVertexAttribArray(0);
-        this.gl.disableVertexAttribArray(1);
-        this.gl.disableVertexAttribArray(2);
-        this.gl.disableVertexAttribArray(3);
+        // console.log("drawing")
+        this.gl.bindVertexArray(this.m_vao);
+        this.gl.drawElementsInstanced(this.gl.TRIANGLES, this.m_indexCount, this.gl.UNSIGNED_SHORT, 0, 1);
     }
 
     private calcNormals(vertices: Array<Vertex>, indices: Array<number>): void {
@@ -128,4 +177,10 @@ export default class Mesh {
         this.addVertices(vertices, indexData, false);
         return this;
     }
+
+    public getIndices():Int16Array { return this.m_indices; }
+    public getVertices():Float32Array { return this.m_vertices; }
+    public getTexCoords():Float32Array { return this.m_uvs; }
+    public getNormals():Float32Array { return this.m_normals; }
+    public getTangents():Float32Array { return this.m_tangents; }
 }

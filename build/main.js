@@ -1114,23 +1114,23 @@ define("engine/rendering/Texture", ["require", "exports", "engine/core/resourceM
     Texture.s_loadedTextures = new Map();
     exports.default = Texture;
 });
-define("engine/rendering/Material", ["require", "exports", "engine/core/resourceManagment/MappedValues", "engine/rendering/Texture"], function (require, exports, MappedValues_1, Texture_1) {
+define("engine/rendering/Material", ["require", "exports", "engine/rendering/Texture", "engine/rendering/Shader", "engine/math/Vector3f"], function (require, exports, Texture_1, Shader_1, Vector3f_6) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    class Material extends MappedValues_1.default {
-        constructor(diffuse, specularIntensity = 1, specularPower = 8) {
-            super();
-            this.m_textureHashMap = new Map();
-            this.addTexture("diffuse", diffuse);
-            this.addFloat("specularIntensity", specularIntensity);
-            this.addFloat("specularPower", specularPower);
+    class Material {
+        constructor(texture = new Texture_1.default("UV_Grid.jpg"), shader = new Shader_1.default("basic")) {
+            this.m_color = new Vector3f_6.default(1, 1, 1);
+            this.m_texture = texture;
+            this.m_shader = shader;
         }
-        addTexture(name, texture) { this.m_textureHashMap.set(name, texture); }
-        getTexture(name) {
-            const result = this.m_textureHashMap.get(name);
-            if (result !== undefined)
-                return result;
-            return new Texture_1.default("test.png");
+        getTexture() {
+            return this.m_texture;
+        }
+        getShader() {
+            return this.m_shader;
+        }
+        getColor() {
+            return this.m_color;
         }
     }
     exports.default = Material;
@@ -1174,12 +1174,15 @@ define("engine/rendering/Shader", ["require", "exports", "engine/core/Display", 
             if (!vertexShaderData || !fragmentShaderData) {
                 throw new Error("No shader found: " + fileName);
             }
-            this.setShaders(vertexShaderData, fragmentShaderData);
+            this.loadShaders(vertexShaderData, fragmentShaderData);
+            this.addUniform("worldMatrix");
+            this.addUniform("baseColor");
+            this.addUniform("sampled");
         }
         bind() {
             this.gl.useProgram(this.program);
         }
-        setShaders(vertexShader, fragShader) {
+        loadShaders(vertexShader, fragShader) {
             const gl = this.gl;
             this.addProgram(vertexShader, gl.VERTEX_SHADER);
             this.addProgram(fragShader, gl.FRAGMENT_SHADER);
@@ -1206,6 +1209,8 @@ define("engine/rendering/Shader", ["require", "exports", "engine/core/Display", 
             gl.attachShader(this.program, shader);
         }
         update(transform, material, renderingEngine) {
+            this.setUniform("worldMatrix", transform.getTransformation());
+            this.setUniformVec("baseColor", material.getColor());
             this.bind();
         }
         getProgram() {
@@ -1233,10 +1238,10 @@ define("engine/rendering/Shader", ["require", "exports", "engine/core/Display", 
         ShaderType["CUSTOM"] = "custom";
     })(ShaderType = exports.ShaderType || (exports.ShaderType = {}));
 });
-define("engine/rendering/RenderingEngine", ["require", "exports", "engine/core/Display", "engine/math/Vector3f", "engine/core/resourceManagment/MappedValues", "engine/rendering/Shader"], function (require, exports, Display_6, Vector3f_6, MappedValues_2, Shader_1) {
+define("engine/rendering/RenderingEngine", ["require", "exports", "engine/core/Display", "engine/math/Vector3f", "engine/core/resourceManagment/MappedValues", "engine/rendering/Shader"], function (require, exports, Display_6, Vector3f_7, MappedValues_1, Shader_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    class RenderingEngine extends MappedValues_2.default {
+    class RenderingEngine extends MappedValues_1.default {
         constructor() {
             super();
             this.gl = Display_6.default.gl;
@@ -1244,8 +1249,8 @@ define("engine/rendering/RenderingEngine", ["require", "exports", "engine/core/D
             this.m_samplerMap.set("diffuse", 0);
             this.m_samplerMap.set("normalMap", 1);
             this.m_samplerMap.set("dispMap", 2);
-            this.addVector3f("ambient", new Vector3f_6.default(0.1, 0.1, 0.1));
-            this.m_ambientShader = new Shader_1.default("ambient");
+            this.addVector3f("ambient", new Vector3f_7.default(0.1, 0.1, 0.1));
+            this.m_ambientShader = new Shader_2.default("ambient");
             this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
             this.gl.frontFace(this.gl.CW);
             this.gl.cullFace(this.gl.BACK);
@@ -1651,6 +1656,7 @@ define("engine/components/Camera3D", ["require", "exports", "engine/math/Matrix4
             const cameraRotation = this.getTransform().getTransformedRot().conjugate().toRotationMatrix();
             const cameraPos = this.getTransform().getTransformedPos().mulNum(-1);
             const cameraTranslation = new Matrix4f_3.default().initTranslation(cameraPos.getX(), cameraPos.getY(), cameraPos.getZ());
+            console.log("perps");
             return this.m_projection.mul(cameraRotation.mul(cameraTranslation));
         }
         addToEngine(engine) {
@@ -1659,7 +1665,7 @@ define("engine/components/Camera3D", ["require", "exports", "engine/math/Matrix4
     }
     exports.default = Camera3D;
 });
-define("engine/components/FreeLook", ["require", "exports", "engine/components/GameComponent", "engine/math/Vector3f", "engine/math/Vector2f", "engine/core/Display", "engine/core/Util", "engine/input/Input", "engine/input/Keyboard"], function (require, exports, GameComponent_2, Vector3f_7, Vector2f_5, Display_8, Util_3, Input_2, Keyboard_3) {
+define("engine/components/FreeLook", ["require", "exports", "engine/components/GameComponent", "engine/math/Vector3f", "engine/math/Vector2f", "engine/core/Display", "engine/core/Util", "engine/input/Input", "engine/input/Keyboard"], function (require, exports, GameComponent_2, Vector3f_8, Vector2f_5, Display_8, Util_3, Input_2, Keyboard_3) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class FreeLook extends GameComponent_2.default {
@@ -1691,7 +1697,7 @@ define("engine/components/FreeLook", ["require", "exports", "engine/components/G
             }
         }
     }
-    FreeLook.Y_AXIS = new Vector3f_7.default(0, 1, 0);
+    FreeLook.Y_AXIS = new Vector3f_8.default(0, 1, 0);
     exports.default = FreeLook;
 });
 define("engine/components/FreeMove", ["require", "exports", "engine/components/GameComponent", "engine/input/Keyboard", "engine/input/Input"], function (require, exports, GameComponent_3, Keyboard_4, Input_3) {
@@ -1783,7 +1789,7 @@ define("engine/core/resourceManagment/loaders/OBJIndex", ["require", "exports"],
     }
     exports.default = OBJIndex;
 });
-define("engine/core/resourceManagment/loaders/IndexedModel", ["require", "exports", "engine/math/Vector3f"], function (require, exports, Vector3f_8) {
+define("engine/core/resourceManagment/loaders/IndexedModel", ["require", "exports", "engine/math/Vector3f"], function (require, exports, Vector3f_9) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class IndexedModel {
@@ -1822,7 +1828,7 @@ define("engine/core/resourceManagment/loaders/IndexedModel", ["require", "export
                 const deltaV2 = this.m_texCoords[i2].getY() - this.m_texCoords[i0].getY();
                 const dividend = (deltaU1 * deltaV2 - deltaU2 * deltaV1);
                 const f = dividend == 0 ? 0.0 : 1.0 / dividend;
-                const tangent = new Vector3f_8.default(0, 0, 0);
+                const tangent = new Vector3f_9.default(0, 0, 0);
                 tangent.SetX(f * (deltaV2 * edge1.getX() - deltaV1 * edge2.getX()));
                 tangent.SetY(f * (deltaV2 * edge1.getY() - deltaV1 * edge2.getY()));
                 tangent.SetZ(f * (deltaV2 * edge1.getZ() - deltaV1 * edge2.getZ()));
@@ -1846,7 +1852,7 @@ define("engine/core/resourceManagment/loaders/IndexedModel", ["require", "export
     }
     exports.default = IndexedModel;
 });
-define("engine/core/resourceManagment/loaders/OBJModel", ["require", "exports", "engine/math/Vector3f", "engine/math/Vector2f", "engine/core/resourceManagment/loaders/OBJIndex", "engine/core/resourceManagment/loaders/TextFileReader", "engine/core/Util", "engine/core/resourceManagment/loaders/IndexedModel", "engine/core/resourceManagment/loaders/ResourcesLoader"], function (require, exports, Vector3f_9, Vector2f_6, OBJIndex_1, TextFileReader_1, Util_4, IndexedModel_1, ResourcesLoader_3) {
+define("engine/core/resourceManagment/loaders/OBJModel", ["require", "exports", "engine/math/Vector3f", "engine/math/Vector2f", "engine/core/resourceManagment/loaders/OBJIndex", "engine/core/resourceManagment/loaders/TextFileReader", "engine/core/Util", "engine/core/resourceManagment/loaders/IndexedModel", "engine/core/resourceManagment/loaders/ResourcesLoader"], function (require, exports, Vector3f_10, Vector2f_6, OBJIndex_1, TextFileReader_1, Util_4, IndexedModel_1, ResourcesLoader_3) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class OBJModel {
@@ -1869,13 +1875,13 @@ define("engine/core/resourceManagment/loaders/OBJModel", ["require", "exports", 
                 if (tokens.length == 0 || tokens[0] === "#")
                     continue;
                 else if (tokens[0] === OBJModel.OBJProperties.VERTEX) {
-                    this.m_positions.push(new Vector3f_9.default(parseFloat(tokens[1]), parseFloat(tokens[2]), parseFloat(tokens[3])));
+                    this.m_positions.push(new Vector3f_10.default(parseFloat(tokens[1]), parseFloat(tokens[2]), parseFloat(tokens[3])));
                 }
                 else if (tokens[0] === OBJModel.OBJProperties.UV) {
                     this.m_texCoords.push(new Vector2f_6.default(parseFloat(tokens[1]), 1.0 - parseFloat(tokens[2])));
                 }
                 else if (tokens[0] === OBJModel.OBJProperties.NORMAL) {
-                    this.m_normals.push(new Vector3f_9.default(parseFloat(tokens[1]), parseFloat(tokens[2]), parseFloat(tokens[3])));
+                    this.m_normals.push(new Vector3f_10.default(parseFloat(tokens[1]), parseFloat(tokens[2]), parseFloat(tokens[3])));
                 }
                 else if (tokens[0] === OBJModel.OBJProperties.FACE) {
                     for (let i = 0; i < tokens.length - 3; i++) {
@@ -1904,7 +1910,7 @@ define("engine/core/resourceManagment/loaders/OBJModel", ["require", "exports", 
                 if (this.m_hasNormals)
                     currentNormal = this.m_normals[currentIndex.getNormalIndex()];
                 else
-                    currentNormal = new Vector3f_9.default(0, 0, 0);
+                    currentNormal = new Vector3f_10.default(0, 0, 0);
                 let modelVertexIndex = resultIndexMap.get(currentIndex);
                 if (modelVertexIndex === undefined) {
                     modelVertexIndex = result.getPositions().length;
@@ -1921,7 +1927,7 @@ define("engine/core/resourceManagment/loaders/OBJModel", ["require", "exports", 
                     normalModel.getPositions().push(currentPosition);
                     normalModel.getTexCoords().push(currentTexCoord);
                     normalModel.getNormals().push(currentNormal);
-                    normalModel.getTangents().push(new Vector3f_9.default(0, 0, 0));
+                    normalModel.getTangents().push(new Vector3f_10.default(0, 0, 0));
                 }
                 indexMap.set(modelVertexIndex, normalModelIndex);
                 result.getIndices().push(modelVertexIndex);
@@ -1968,54 +1974,88 @@ define("engine/core/resourceManagment/loaders/OBJModel", ["require", "exports", 
     };
     exports.default = OBJModel;
 });
-define("engine/rendering/Mesh", ["require", "exports", "engine/core/Display", "engine/core/resourceManagment/MeshResource", "engine/core/Vertex", "engine/core/Util", "engine/core/resourceManagment/loaders/OBJModel"], function (require, exports, Display_10, MeshResource_1, Vertex_2, Util_5, OBJModel_1) {
+define("engine/rendering/Mesh", ["require", "exports", "engine/core/Display", "engine/core/Vertex", "engine/core/resourceManagment/loaders/OBJModel"], function (require, exports, Display_10, Vertex_2, OBJModel_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class Mesh {
-        constructor(fileName) {
+        constructor(fileName = "cube.obj") {
             this.gl = Display_10.default.gl;
-            this.m_fileName = fileName;
-            const oldResource = Mesh.s_loadedModels.get(fileName);
-            if (oldResource !== undefined) {
-                this.m_resource = oldResource;
-                this.m_resource.addReference();
-            }
-            else {
-                this.loadMesh(fileName);
-                Mesh.s_loadedModels.set(fileName, this.m_resource);
-            }
+            this.m_indexCount = 0;
+            this.loadMesh(fileName);
         }
-        finalize() {
-            if (this.m_resource.removeReference() && !(this.m_fileName === " ")) {
-                Mesh.s_loadedModels.delete(this.m_fileName);
-            }
+        init(program) {
+            const vertexAttributeLocation = this.gl.getAttribLocation(program, "a_position");
+            const texCoordAttributeLocation = this.gl.getAttribLocation(program, "a_texcoord");
+            const normalAttributeLocation = this.gl.getAttribLocation(program, "a_normal");
+            const ibo = this.gl.createBuffer();
+            this.m_indexCount = this.m_indices.length;
+            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, ibo);
+            this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.m_indices, this.gl.STATIC_DRAW);
+            const vbo = this.gl.createBuffer();
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vbo);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, this.m_vertices, this.gl.STATIC_DRAW);
+            this.gl.enableVertexAttribArray(vertexAttributeLocation);
+            this.gl.vertexAttribPointer(vertexAttributeLocation, 3, this.gl.FLOAT, false, 0, 0);
+            const UVbo = this.gl.createBuffer();
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, UVbo);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, this.m_uvs, this.gl.STATIC_DRAW);
+            this.gl.enableVertexAttribArray(texCoordAttributeLocation);
+            this.gl.vertexAttribPointer(texCoordAttributeLocation, 2, this.gl.FLOAT, true, 0, 0);
+            console.log(normalAttributeLocation);
+            const nbo = this.gl.createBuffer();
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, nbo);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, this.m_normals, this.gl.STATIC_DRAW);
+            this.gl.enableVertexAttribArray(normalAttributeLocation);
+            this.gl.vertexAttribPointer(normalAttributeLocation, 3, this.gl.FLOAT, false, 0, 0);
+            this.m_vao = this.gl.createVertexArray();
+            this.gl.bindVertexArray(this.m_vao);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vbo);
+            this.gl.enableVertexAttribArray(vertexAttributeLocation);
+            this.gl.vertexAttribPointer(vertexAttributeLocation, 3, this.gl.FLOAT, false, 0, 0);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, UVbo);
+            this.gl.enableVertexAttribArray(texCoordAttributeLocation);
+            this.gl.vertexAttribPointer(texCoordAttributeLocation, 2, this.gl.FLOAT, true, 0, 0);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, nbo);
+            this.gl.enableVertexAttribArray(normalAttributeLocation);
+            this.gl.vertexAttribPointer(normalAttributeLocation, 3, this.gl.HALF_FLOAT, false, 0, 0);
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
+            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, ibo);
+            this.gl.bindVertexArray(null);
         }
         addVertices(vertices, indices, calcNormals) {
             if (calcNormals) {
                 this.calcNormals(vertices, indices);
             }
-            this.m_resource = new MeshResource_1.default(indices.length);
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.m_resource.getVbo());
-            this.gl.bufferData(this.gl.ARRAY_BUFFER, Util_5.default.CreateFlippedVertexBuffer(vertices), this.gl.STATIC_DRAW);
-            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.m_resource.getIbo());
-            this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, Util_5.default.CreateFlippedIntBuffer(indices), this.gl.STATIC_DRAW);
+            const verts = new Array();
+            const norms = new Array();
+            const uvs = new Array();
+            const tans = new Array();
+            let vrt;
+            for (let i = 0; i < indices.length; i++) {
+                vrt = vertices[indices[i]];
+                verts.push(vrt.getPos().getX());
+                verts.push(vrt.getPos().getY());
+                verts.push(vrt.getPos().getZ());
+                norms.push(vrt.getNormal().getX());
+                norms.push(vrt.getNormal().getY());
+                norms.push(vrt.getNormal().getZ());
+                uvs.push(vrt.getTexCoord().getX());
+                uvs.push(vrt.getTexCoord().getY());
+                tans.push(vrt.getTangent().getX());
+                tans.push(vrt.getTangent().getY());
+                tans.push(vrt.getTangent().getZ());
+            }
+            this.m_indices = new Int16Array(indices);
+            this.m_vertices = new Float32Array(verts);
+            this.m_uvs = new Float32Array(uvs);
+            this.m_normals = new Float32Array(norms);
+            this.m_tangents = new Float32Array(tans);
         }
         draw() {
-            this.gl.enableVertexAttribArray(0);
-            this.gl.enableVertexAttribArray(1);
-            this.gl.enableVertexAttribArray(2);
-            this.gl.enableVertexAttribArray(3);
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.m_resource.getVbo());
-            this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, Vertex_2.default.SIZE * 4, 0);
-            this.gl.vertexAttribPointer(1, 2, this.gl.FLOAT, false, Vertex_2.default.SIZE * 4, 12);
-            this.gl.vertexAttribPointer(2, 3, this.gl.FLOAT, false, Vertex_2.default.SIZE * 4, 20);
-            this.gl.vertexAttribPointer(3, 3, this.gl.FLOAT, false, Vertex_2.default.SIZE * 4, 32);
-            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.m_resource.getIbo());
-            this.gl.drawElements(this.gl.TRIANGLES, this.m_resource.getSize(), this.gl.UNSIGNED_INT, 0);
-            this.gl.disableVertexAttribArray(0);
-            this.gl.disableVertexAttribArray(1);
-            this.gl.disableVertexAttribArray(2);
-            this.gl.disableVertexAttribArray(3);
+            this.gl.bindVertexArray(this.m_vao);
+            this.gl.drawElementsInstanced(this.gl.TRIANGLES, this.m_indexCount, this.gl.UNSIGNED_SHORT, 0, 1);
         }
         calcNormals(vertices, indices) {
             for (let i = 0; i < indices.length; i += 3) {
@@ -2048,8 +2088,12 @@ define("engine/rendering/Mesh", ["require", "exports", "engine/core/Display", "e
             this.addVertices(vertices, indexData, false);
             return this;
         }
+        getIndices() { return this.m_indices; }
+        getVertices() { return this.m_vertices; }
+        getTexCoords() { return this.m_uvs; }
+        getNormals() { return this.m_normals; }
+        getTangents() { return this.m_tangents; }
     }
-    Mesh.s_loadedModels = new Map();
     exports.default = Mesh;
 });
 define("engine/components/MeshRenderer", ["require", "exports", "engine/components/GameComponent"], function (require, exports, GameComponent_4) {
@@ -2060,15 +2104,21 @@ define("engine/components/MeshRenderer", ["require", "exports", "engine/componen
             super();
             this.m_mesh = mesh;
             this.m_material = material;
+            const program = this.m_material.getShader().getProgram();
+            if (!program) {
+                throw new Error("Error get shader program");
+            }
+            this.m_mesh.init(program);
         }
         render(shader, renderingEngine) {
             super.render(shader, renderingEngine);
+            this.m_material.getShader().update(this.getTransform(), this.m_material, renderingEngine);
             this.m_mesh.draw();
         }
     }
     exports.default = MeshRenderer;
 });
-define("game/TestGame", ["require", "exports", "engine/core/Game", "engine/rendering/Mesh", "engine/core/GameObject", "engine/rendering/Material", "engine/rendering/Texture", "engine/components/MeshRenderer", "engine/rendering/Shader", "engine/math/Matrix4f", "engine/components/Camera3D"], function (require, exports, Game_1, Mesh_1, GameObject_2, Material_1, Texture_2, MeshRenderer_1, Shader_2, Matrix4f_4, Camera3D_1) {
+define("game/TestGame", ["require", "exports", "engine/core/Game", "engine/rendering/Mesh", "engine/core/GameObject", "engine/rendering/Material", "engine/components/MeshRenderer", "engine/math/Vector3f"], function (require, exports, Game_1, Mesh_1, GameObject_2, Material_1, MeshRenderer_1, Vector3f_11) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class TestGame extends Game_1.default {
@@ -2076,25 +2126,22 @@ define("game/TestGame", ["require", "exports", "engine/core/Game", "engine/rende
             super();
         }
         init() {
-            const cubeMesh = new Mesh_1.default("cube.obj");
-            const material = new Material_1.default(new Texture_2.default("UV_Grid.jpg"));
-            const shader = new Shader_2.default("basic");
-            const meshRenderer = new MeshRenderer_1.default(cubeMesh, material);
-            const cubeObject = new GameObject_2.default("cube").addComponent(meshRenderer);
-            const cam = new Camera3D_1.default(new Matrix4f_4.default().initPerspective());
-            const cameraObject = new GameObject_2.default("camera").addComponent(cam);
-            this.addObject(cameraObject);
-            this.addObject(cubeObject);
+            const cubeMesh = new Mesh_1.default();
+            const cubeMaterial = new Material_1.default();
+            const cube = new GameObject_2.default();
+            cube.getTransform().setPos(new Vector3f_11.default(0, 0, 20));
+            cube.addComponent(new MeshRenderer_1.default(cubeMesh, cubeMaterial));
+            this.addObject(cube);
         }
     }
     exports.default = TestGame;
 });
-define("game/Main", ["require", "exports", "engine/core/CoreEngine", "engine/core/Display", "game/TestGame", "engine/core/resourceManagment/loaders/ResourcesLoader", "engine/core/Util"], function (require, exports, CoreEngine_1, Display_11, TestGame_1, ResourcesLoader_4, Util_6) {
+define("game/Main", ["require", "exports", "engine/core/CoreEngine", "engine/core/Display", "game/TestGame", "engine/core/resourceManagment/loaders/ResourcesLoader", "engine/core/Util"], function (require, exports, CoreEngine_1, Display_11, TestGame_1, ResourcesLoader_4, Util_5) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class Main {
         static init(autostart = true) {
-            Util_6.default.loadJSONFile(ResourcesLoader_4.default.URL + "resources.json")
+            Util_5.default.loadJSONFile(ResourcesLoader_4.default.URL + "resources.json")
                 .then((result) => {
                 return ResourcesLoader_4.default.loadResources(result);
             })

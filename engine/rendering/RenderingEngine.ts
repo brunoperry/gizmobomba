@@ -47,6 +47,7 @@ export default class RenderingEngine extends MappedValues {
 	// }
 
 	public render(object: GameObject): void {
+
 		if (this.getMainCamera() === null) {
 			new Error("Error! Main camera not found. This is very very big bug, and game will crash.");
 			return;

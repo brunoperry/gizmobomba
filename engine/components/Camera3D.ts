@@ -15,7 +15,7 @@ export default class Camera3D extends GameComponent {
         const cameraPos: Vector3f = this.getTransform().getTransformedPos().mulNum(-1);
 
         const cameraTranslation: Matrix4f = new Matrix4f().initTranslation(cameraPos.getX(), cameraPos.getY(), cameraPos.getZ());
-
+        console.log("perps");
         return this.m_projection.mul(cameraRotation.mul(cameraTranslation));
     }
 

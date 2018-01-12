@@ -13,6 +13,7 @@ export default abstract class Game {
 	}
 
 	public update(delta: number): void {
+
 		this.getRootObject().updateAll(delta);
 	}
 
@@ -23,7 +24,6 @@ export default abstract class Game {
 
 	public addObject(object: GameObject): void {
 
-		// console.log(this.getRootObject())
 		this.getRootObject().addChild(object);
 	}
 

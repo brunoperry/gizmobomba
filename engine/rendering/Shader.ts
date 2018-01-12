@@ -32,14 +32,18 @@ export default class Shader {
         if(!vertexShaderData || !fragmentShaderData) {
             throw new Error("No shader found: " + fileName);
         }
-        this.setShaders(vertexShaderData, fragmentShaderData);
+        this.loadShaders(vertexShaderData, fragmentShaderData);
+
+        this.addUniform("worldMatrix");
+        this.addUniform("baseColor");
+        this.addUniform("sampled");
     }
 
     public bind(): void {
         this.gl.useProgram(this.program);
     }
 
-    private setShaders(vertexShader: string, fragShader: string): void {
+    private loadShaders(vertexShader: string, fragShader: string): void {
 
         const gl: WebGLRenderingContext = this.gl;
         this.addProgram(vertexShader, gl.VERTEX_SHADER);
@@ -76,6 +80,9 @@ export default class Shader {
     }
 
     public update(transform: Transform, material: Material, renderingEngine: RenderingEngine): void {
+
+        this.setUniform("worldMatrix", transform.getTransformation());
+        this.setUniformVec("baseColor", material.getColor());
         this.bind();
     }
     public getProgram(): WebGLProgram | null {
@@ -89,6 +96,7 @@ export default class Shader {
         this.gl.uniform1f(this.uniforms.get(uniformName) as WebGLUniformLocation, value);
     }
     public setUniformVec(uniformName: string, value: Vector3f): void {
+
         this.gl.uniform3f(this.uniforms.get(uniformName) as WebGLUniformLocation, value.getX(), value.getY(), value.getZ());
     }
     public setUniform(uniformName: string, value: Matrix4f): void {
